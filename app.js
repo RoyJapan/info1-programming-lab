@@ -17,6 +17,7 @@ const state = {
   toastTimer: null,
   playTimer: null,
   currentOutput: "",
+  currentLessonId: null,
 };
 const el = (tag, attrs = {}, text = "") => {
   const node = document.createElement(tag);
@@ -52,6 +53,7 @@ function readSavedState() {
       skipPrediction: saved.skipPrediction === true,
       arrayBase: saved.arrayBase === 0 ? 0 : 1,
       records: Array.isArray(saved.records) ? saved.records.slice(0, 10) : [],
+      lessonId: lessons.some((lesson) => lesson.id === saved.lessonId) ? saved.lessonId : null,
     };
   } catch {
     return null;
@@ -68,6 +70,7 @@ function currentState() {
     skipPrediction: $("skip-prediction").checked,
     arrayBase: Number($("array-base").value) === 0 ? 0 : 1,
     records: state.records.slice(0, 10),
+    lessonId: state.currentLessonId,
   };
 }
 
@@ -160,12 +163,15 @@ function replaceDocument(data, action) {
   if (!confirmReplacement(action)) return false;
   state.blockAst = [];
   state.blocksValid = true;
+  state.currentLessonId = lessons.some((lesson) => lesson.id === data.lessonId) ? data.lessonId : null;
+  renderLessonContext();
   $("blocks-view").hidden = true;
   $("code-view").hidden = false;
   $("blocks-mode").classList.remove("active");
   $("code-mode").classList.add("active");
   $("blocks-mode").setAttribute("aria-pressed", "false");
   $("code-mode").setAttribute("aria-pressed", "true");
+  updateModeActions();
   $("program-title").value = data.title || "新しいプログラム";
   $("input-values").value = data.inputValues || "";
   $("prediction").value = data.prediction || "";
@@ -182,7 +188,6 @@ function insertAtCursor(text) {
     switchToCode();
     if (!$("blocks-view").hidden) return;
   }
-  if (document.activeElement !== code) code.setSelectionRange(code.value.length, code.value.length);
   const start = code.selectionStart;
   const end = code.selectionEnd;
   code.setRangeText(text, start, end, "end");
@@ -250,7 +255,7 @@ function clearTrace() {
   $("trace-pause").disabled = true;
   $("trace-next").disabled = true;
   updateLineNumbers();
-  if ($("tab-trace-help").getAttribute("aria-selected") === "true") renderTraceTable();
+  renderTraceTable();
 }
 
 function formatVariable(value) {
@@ -261,7 +266,7 @@ function formatVariable(value) {
 }
 
 function renderTraceTable() {
-  const content = $("assist-content");
+  const content = $("trace-content");
   content.replaceChildren();
   if (!state.trace.length) {
     content.append(el("p", { className: "assist-note" }, "プログラムを実行すると、行ごとの変数と配列の変化を表示します。"));
@@ -303,7 +308,7 @@ function renderTraceStep(index, updateOutput = true) {
   $("trace-play").disabled = state.traceIndex >= state.trace.length - 1;
   $("trace-pause").disabled = !state.playTimer;
   if (updateOutput) $("output").textContent = row.output || "（この時点ではまだ出力がありません）";
-  if ($("tab-trace-help").getAttribute("aria-selected") === "true") renderTraceTable();
+  if (document.querySelector('[data-result="trace"]').getAttribute("aria-selected") === "true") renderTraceTable();
 }
 
 function runTrace() {
@@ -332,9 +337,23 @@ function showAssist(name) {
   });
   const selected = document.querySelector('[data-assist="' + name + '"]');
   $("assist-content").setAttribute("aria-labelledby", selected.id);
-  if (name === "trace") renderTraceTable();
-  else if (name === "help") renderInputHelp();
+  if (name === "help") renderInputHelp();
   else renderPalette();
+}
+
+function renderLessonContext() {
+  const lesson = lessons.find((item) => item.id === state.currentLessonId);
+  $("lesson-context").hidden = !lesson;
+  if (!lesson) return;
+  $("lesson-context-title").textContent = lesson.title;
+  $("lesson-context-prompt").textContent = lesson.prompt;
+}
+
+function updateModeActions() {
+  const blockMode = !$("blocks-view").hidden;
+  $("text-edit-actions").hidden = blockMode;
+  $("tab-block-palette").hidden = blockMode;
+  if (blockMode && $("tab-block-palette").getAttribute("aria-selected") === "true") showAssist("help");
 }
 
 function appendPaletteGroup(container, title, items) {
@@ -353,7 +372,7 @@ function appendPaletteGroup(container, title, items) {
 function renderPalette() {
   const content = $("assist-content");
   content.replaceChildren();
-  content.append(el("p", { className: "assist-note" }, "ボタンを押すと、選択中のカーソル位置に入力します。"));
+  content.append(el("p", { className: "assist-note" }, "構文を選ぶと、カーソル位置に挿入します。"));
   appendPaletteGroup(content, "変数・配列", [
     { label: "x = 0", value: "x = 0" },
     { label: "配列 = []", value: "配列 = []" },
@@ -543,6 +562,7 @@ function switchToBlocks() {
     $("blocks-mode").classList.add("active");
     $("code-mode").setAttribute("aria-pressed", "false");
     $("blocks-mode").setAttribute("aria-pressed", "true");
+    updateModeActions();
     renderBlockTree();
   } catch (error) {
     showToast(error.line + "行目: " + error.message + " コードは変更していません。");
@@ -560,6 +580,7 @@ function switchToCode() {
   $("code-mode").classList.add("active");
   $("blocks-mode").setAttribute("aria-pressed", "false");
   $("code-mode").setAttribute("aria-pressed", "true");
+  updateModeActions();
   code.focus();
 }
 
@@ -590,6 +611,7 @@ function renderLessonList(filter = "all") {
     load.addEventListener("click", () => {
       if (!replaceDocument({
         title: lesson.title,
+        lessonId: lesson.id,
         code: lesson.code,
         inputValues: lesson.input.join("\n"),
         prediction: "",
@@ -670,6 +692,7 @@ function switchResult(name) {
     view.hidden = !active;
     view.classList.toggle("active", active);
   });
+  if (name === "trace") renderTraceTable();
 }
 
 function addRunRecord(result) {
@@ -739,8 +762,8 @@ function executeProgram() {
     $("trace-pause").disabled = true;
     $("trace-position").textContent = state.trace.length ? "0 / " + state.trace.length + " 件" : "記録できる処理がありません";
     if (state.trace.length) renderTraceStep(0, false);
+    renderTraceTable();
     switchResult("result");
-    showAssist("trace");
     addRunRecord(result);
   } catch (error) {
     const failure = error instanceof ProgramError ? error : new ProgramError("プログラムを読み取れません。", 1);
@@ -779,6 +802,8 @@ function renderInitialState() {
   $("array-base").value = String(initial.arrayBase);
   code.value = initial.code;
   state.records = initial.records;
+  state.currentLessonId = initial.lessonId || null;
+  renderLessonContext();
   updateLineNumbers();
   resetHistory();
   renderRecords();
@@ -820,9 +845,9 @@ $("add-block").addEventListener("click", () => {
 });
 $("tab-block-palette").addEventListener("click", () => showAssist("palette"));
 $("tab-input-help").addEventListener("click", () => showAssist("help"));
-$("tab-trace-help").addEventListener("click", () => showAssist("trace"));
 document.querySelectorAll("[data-result]").forEach((tab) => tab.addEventListener("click", () => switchResult(tab.dataset.result)));
 document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", async () => {
+  button.closest("details")?.removeAttribute("open");
   const action = button.dataset.action;
   if (action === "new") {
     if (replaceDocument({ code: "", title: "新しいプログラム", inputValues: "", prediction: "", skipPrediction: false, arrayBase: 1 }, "新規作成")) switchToCode();

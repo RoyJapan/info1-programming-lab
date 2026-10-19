@@ -21,22 +21,32 @@
   </header>
 
   <nav class="toolbar" aria-label="プログラム操作">
-    <button data-action="new" type="button"><span aria-hidden="true">＋</span> 新規</button>
     <button data-action="lessons" class="toolbar-highlight" type="button"><span aria-hidden="true">▤</span> 教材</button>
-    <button data-action="open" type="button"><span aria-hidden="true">▱</span> 開く</button>
-    <button data-action="paste" type="button"><span aria-hidden="true">▣</span> 貼り付け</button>
-    <button data-action="save" type="button"><span aria-hidden="true">▣</span> 保存</button>
-    <span class="toolbar-divider" aria-hidden="true"></span>
-    <button data-action="undo" type="button" aria-label="元に戻す">↶ 元に戻す</button>
-    <button data-action="redo" type="button" aria-label="やり直す">↷ やり直し</button>
-    <button data-action="duplicate" type="button">▢ 複製</button>
-    <button data-action="delete" type="button">⌫ 削除</button>
-    <span class="toolbar-divider" aria-hidden="true"></span>
-    <button data-action="move-up" type="button" aria-label="選択行を上へ">↑ 行</button>
-    <button data-action="move-down" type="button" aria-label="選択行を下へ">↓ 行</button>
-    <button data-action="outdent" type="button" aria-label="インデントを減らす">⇤ 段落</button>
-    <button data-action="indent" type="button" aria-label="インデントを増やす">⇥ 段落</button>
-    <button data-action="export" class="toolbar-spacer" type="button">⇩ 書き出し</button>
+    <details class="toolbar-menu">
+      <summary>ファイル ▾</summary>
+      <div class="toolbar-menu-items">
+        <button data-action="new" type="button">＋ 新規</button>
+        <button data-action="open" type="button">▱ 開く</button>
+        <button data-action="paste" type="button">▣ 貼り付け</button>
+        <button data-action="save" type="button">▣ 保存</button>
+        <button data-action="export" type="button">⇩ 書き出し</button>
+      </div>
+    </details>
+    <div id="text-edit-actions" class="toolbar-actions">
+      <button data-action="undo" type="button" aria-label="元に戻す">↶ 元に戻す</button>
+      <button data-action="redo" type="button" aria-label="やり直し">↷ やり直し</button>
+      <details class="toolbar-menu">
+        <summary>行操作 ▾</summary>
+        <div class="toolbar-menu-items">
+          <button data-action="duplicate" type="button">▢ 複製</button>
+          <button data-action="delete" type="button">⌫ 削除</button>
+          <button data-action="move-up" type="button" aria-label="選択行を上へ">↑ 行を上へ</button>
+          <button data-action="move-down" type="button" aria-label="選択行を下へ">↓ 行を下へ</button>
+          <button data-action="outdent" type="button" aria-label="インデントを減らす">⇤ 字下げを減らす</button>
+          <button data-action="indent" type="button" aria-label="インデントを増やす">⇥ 字下げを増やす</button>
+        </div>
+      </details>
+    </div>
   </nav>
   <input id="open-file" class="visually-hidden" type="file" accept="application/json,.json">
 
@@ -55,8 +65,13 @@
           </select>
           <button id="code-mode" class="mode-button active" type="button" aria-pressed="true">コード</button>
           <button id="blocks-mode" class="mode-button" type="button" aria-pressed="false">ブロック</button>
+          <button id="run-button" class="run-button primary-button" type="button"><span aria-hidden="true">▶</span> 実行</button>
         </div>
       </div>
+      <details id="lesson-context" class="lesson-context" hidden>
+        <summary>課題: <span id="lesson-context-title"></span></summary>
+        <p id="lesson-context-prompt"></p>
+      </details>
 
       <div id="code-view" class="code-view">
         <div id="line-numbers" class="line-numbers" aria-hidden="true">1</div>
@@ -88,9 +103,8 @@
     <aside class="side-column">
       <section class="assist-panel panel" aria-label="編集補助">
         <div class="tabs" role="tablist" aria-label="編集補助">
-          <button class="tab active" id="tab-block-palette" role="tab" aria-selected="true" aria-controls="assist-content" data-assist="palette" type="button">ブロックを追加</button>
+          <button class="tab active" id="tab-block-palette" role="tab" aria-selected="true" aria-controls="assist-content" data-assist="palette" type="button">構文を挿入</button>
           <button class="tab" id="tab-input-help" role="tab" aria-selected="false" aria-controls="assist-content" data-assist="help" type="button">入力補助</button>
-          <button class="tab" id="tab-trace-help" role="tab" aria-selected="false" aria-controls="assist-content" data-assist="trace" type="button">トレース</button>
         </div>
         <div id="assist-content" class="assist-content" role="tabpanel" aria-labelledby="tab-block-palette"></div>
       </section>
@@ -99,6 +113,7 @@
         <div class="tabs result-tabs" role="tablist" aria-label="実行パネル">
           <button class="tab active" data-result="result" role="tab" aria-selected="true" type="button">結果 <span id="result-dot" class="result-dot" aria-hidden="true"></span></button>
           <button class="tab" data-result="input" role="tab" aria-selected="false" type="button">入力</button>
+          <button class="tab" data-result="trace" role="tab" aria-selected="false" aria-controls="trace-content" type="button">トレース</button>
           <button class="tab" data-result="record" role="tab" aria-selected="false" type="button">記録</button>
         </div>
         <div class="result-content">
@@ -110,7 +125,7 @@
               <div id="comparison" class="comparison" aria-live="polite"></div>
             </div>
             <div class="output-area">
-              <div class="output-heading"><strong>実行結果</strong><button id="run-button" class="run-button" type="button"><span aria-hidden="true">▶</span> 実行する</button></div>
+              <div class="output-heading"><strong>実行結果</strong></div>
               <pre id="output" class="output" aria-live="polite">左に予想を書いてから実行しよう。</pre>
             </div>
           </section>
@@ -119,16 +134,19 @@
             <textarea id="input-values" rows="7" placeholder="例：\n12\n名前"></textarea>
             <p class="muted">数値として読める値は数値、それ以外は文字列として使われます。</p>
           </section>
+          <section class="result-view trace-view" data-view="trace" aria-label="実行トレース" hidden>
+            <div id="trace-controls" class="trace-controls" hidden>
+              <button id="trace-play" type="button" class="primary-button">▶ 自動再生</button>
+              <button id="trace-pause" type="button" class="quiet-button" disabled>一時停止</button>
+              <button id="trace-next" type="button" class="quiet-button" disabled>1ステップ進む</button>
+              <span id="trace-position" class="muted">実行後にトレースできます</span>
+            </div>
+            <div id="trace-content"></div>
+          </section>
           <section class="result-view record-view" data-view="record" aria-label="実行記録" hidden>
             <div class="record-heading"><strong>実行記録</strong><button id="clear-records" type="button" class="quiet-button">記録を消去</button></div>
             <ol id="run-records" class="run-records"><li class="muted">まだ実行記録はありません。</li></ol>
           </section>
-        </div>
-        <div id="trace-controls" class="trace-controls" hidden>
-          <button id="trace-play" type="button" class="primary-button">▶ 自動再生</button>
-          <button id="trace-pause" type="button" class="quiet-button" disabled>一時停止</button>
-          <button id="trace-next" type="button" class="quiet-button" disabled>1ステップ進む</button>
-          <span id="trace-position" class="muted">実行後にトレースできます</span>
         </div>
       </section>
     </aside>
