@@ -1,4 +1,4 @@
-const CACHE_NAME = "info1-programming-lab-v2";
+const CACHE_NAME = "info1-programming-lab-v3";
 const APP_FILES = [
   "./",
   "./index.html",

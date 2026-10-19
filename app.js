@@ -32,9 +32,16 @@ const el = (tag, attrs = {}, text = "") => {
 };
 
 const defaultCode = [
+  "Data = [3, 1, 4]",
+  "goukei = 0",
+  "i を 0 から 要素数(Data) - 1 まで 1 ずつ増やしながら繰り返す:",
+  "  goukei = goukei + Data[i]",
+  "表示する(\"合計：\", goukei)",
+].join("\n");
+const previousDefaultCode = [
   "A = [3, 1, 4]",
   "合計 = 0",
-  "i を 0 から 要素数(A) - 1 まで 1 ずつ増やしながら繰り返す:",
+  "i を 1 から 要素数(A) まで 1 ずつ増やしながら繰り返す:",
   "  合計 = 合計 + A[i]",
   "表示する(\"合計：\", 合計)",
 ].join("\n");
@@ -45,13 +52,14 @@ function readSavedState() {
     if (!raw) return null;
     const saved = JSON.parse(raw);
     if (!saved || typeof saved !== "object" || typeof saved.code !== "string" || saved.code.length > runtimeLimits.sourceLength) return null;
+    const migrateStarter = saved.title === "配列の合計を求める" && saved.code === previousDefaultCode && saved.arrayBase === 1;
     return {
-      code: saved.code,
+      code: migrateStarter ? defaultCode : saved.code,
       title: typeof saved.title === "string" ? saved.title.slice(0, 80) : "新しいプログラム",
       inputValues: typeof saved.inputValues === "string" ? saved.inputValues.slice(0, 20_000) : "",
       prediction: typeof saved.prediction === "string" ? saved.prediction.slice(0, 20_000) : "",
       skipPrediction: saved.skipPrediction === true,
-      arrayBase: saved.arrayBase === 1 ? 1 : 0,
+      arrayBase: migrateStarter ? 0 : saved.arrayBase === 1 ? 1 : 0,
       records: Array.isArray(saved.records) ? saved.records.slice(0, 10) : [],
       lessonId: lessons.some((lesson) => lesson.id === saved.lessonId) ? saved.lessonId : null,
     };
@@ -375,8 +383,8 @@ function renderPalette() {
   content.append(el("p", { className: "assist-note" }, "構文を選ぶと、カーソル位置に挿入します。"));
   appendPaletteGroup(content, "変数・配列", [
     { label: "x = 0", value: "x = 0" },
-    { label: "配列 = []", value: "配列 = []" },
-    { label: "配列[0]", value: "配列[0]" },
+    { label: "A = []", value: "A = []" },
+    { label: "A[0]", value: "A[0]" },
   ]);
   appendPaletteGroup(content, "演算子", ["+", "-", "*", "/", "÷", "%", "**", "==", "!=", "<", "<=", ">", ">=", "and", "or", "not"].map((value) => ({ label: value, value: " " + value + " " })));
   appendPaletteGroup(content, "関数・表示", [
@@ -392,9 +400,9 @@ function renderPalette() {
     { label: "もし", value: "もし 条件 ならば:\n  \n" },
     { label: "そうでなくもし", value: "そうでなくもし 条件 ならば:\n  \n" },
     { label: "繰返し", value: "i を 0 から 2 まで 1 ずつ増やしながら繰り返す:\n  \n" },
-    { label: "減らす繰返し", value: "i を 3 から 1 まで 1 ずつ減らしながら繰り返す:\n  \n" },
+    { label: "減らす繰返し", value: "i を 2 から 0 まで 1 ずつ減らしながら繰り返す:\n  \n" },
     { label: "条件繰返し", value: "条件 の間繰り返す:\n  \n" },
-    { label: "すべての値を", value: "配列のすべての値を0にする" },
+    { label: "すべての値を", value: "Aのすべての値を0にする" },
     { label: "# コメント", value: "# " },
   ]);
 }
@@ -420,7 +428,7 @@ function makeBlock(type) {
   if (type === "assign") return { type, target: { type: "variable", name: "x", line: 1 }, expression: "0", line: 1 };
   if (type === "print") return { type, argsText: ['"こんにちは"'], args: [], line: 1 };
   if (type === "if") return { type, condition: "x == 1", then: [], otherwise: [], line: 1 };
-  if (type === "for") return { type, name: "i", start: "1", end: "3", step: "1", body: [], line: 1 };
+  if (type === "for") return { type, name: "i", start: "0", end: "2", step: "1", body: [], line: 1 };
   if (type === "fill") return { type, name: "A", expression: "0", line: 1 };
   if (type === "comment") return { type, text: " メモ", line: 1 };
   return { type: "while", condition: "x < 3", body: [], line: 1 };
@@ -592,6 +600,7 @@ function renderLessonList(filter = "all") {
     card.append(el("h3", {}, lesson.title));
     const meta = el("div", { className: "lesson-meta" });
     meta.append(el("span", { className: "lesson-chip" }, lesson.year), el("span", { className: "lesson-chip" }, lesson.level));
+    if (lesson.arrayBase === 1) meta.append(el("span", { className: "lesson-chip" }, "添字は1から（問題文指定）"));
     lesson.tags.forEach((tag) => meta.append(el("span", { className: "lesson-chip" }, tag)));
     card.append(meta, el("p", {}, lesson.prompt), el("p", {}, lesson.explanation), el("p", {}, lesson.rationale));
     const source = el("p", { className: "lesson-source" });
@@ -616,7 +625,7 @@ function renderLessonList(filter = "all") {
         inputValues: lesson.input.join("\n"),
         prediction: "",
         skipPrediction: false,
-        arrayBase: 0,
+        arrayBase: lesson.arrayBase ?? 0,
       }, lesson.title)) return;
       $("lesson-dialog").close();
       switchToCode();

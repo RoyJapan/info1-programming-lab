@@ -69,12 +69,18 @@ test("公式サンプル: コード→ブロック→コードで同じ結果に
 });
 
 test("既定の配列添字は0始まり", () => {
-  assert.equal(run("A = [3, 1, 4]\n合計 = 0\ni を 0 から 要素数(A) - 1 まで 1 ずつ増やしながら繰り返す:\n  合計 = 合計 + A[i]\n表示する(合計)"), "8\n");
+  assert.equal(run("Data = [3, 1, 4]\ngoukei = 0\ni を 0 から 要素数(Data) - 1 まで 1 ずつ増やしながら繰り返す:\n  goukei = goukei + Data[i]\n表示する(goukei)"), "8\n");
+});
+
+test("教材は問題文で指定された配列添字を使う", () => {
+  assert.equal(lessons.find((lesson) => lesson.id === "past-r7-task-assignment").arrayBase, 1);
+  assert.equal(lessons.find((lesson) => lesson.id === "past-r8-wait-time").arrayBase, 1);
+  assert.equal(lessons.find((lesson) => lesson.id === "forecast-2027-count-days").arrayBase ?? 0, 0);
 });
 
 test("教材はすべて期待出力どおりで、往復してもコードが変わらない", () => {
   for (const lesson of lessons) {
-    assert.equal(run(lesson.code, { inputValues: lesson.input }).trimEnd(), lesson.expected, lesson.id);
+    assert.equal(run(lesson.code, { arrayBase: lesson.arrayBase ?? 0, inputValues: lesson.input }).trimEnd(), lesson.expected, lesson.id);
     assert.equal(roundTrip(lesson.code), lesson.code, lesson.id);
   }
 });
