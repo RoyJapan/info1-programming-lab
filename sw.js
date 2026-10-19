@@ -1,4 +1,4 @@
-const CACHE_NAME = "info1-programming-lab-v1";
+const CACHE_NAME = "info1-programming-lab-v2";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -26,7 +26,11 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
     fetch(event.request).then((response) => {
-      if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+      // respondWith に渡した後では本文を読めないため、先に複製しておく。
+      if (response.ok) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+      }
       return response;
     }).catch(() => caches.match(event.request))
   );
