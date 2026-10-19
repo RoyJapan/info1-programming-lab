@@ -46,16 +46,16 @@ const officialSample = [
   '  表示する(i," ",Data[ i])',
 ].join("\n");
 
-const table = [3, 18, 29, 33, 48, 52, 62, 77, 89, 97].map((value, index) => `${index}   ${value}\n`).join("");
+const table = [3, 18, 29, 33, 48, 52, 62, 77, 89, 97].map((value, index) => `${index} ${value}\n`).join("");
 
 test("公式サンプル: 見つかる場合", () => {
   assert.equal(run(officialSample, { arrayBase: 0, inputValues: ["52"] }),
-    "0～99の数字を入力してください\n52 は 5 番目にありました\n添字   要素\n" + table);
+    "0～99の数字を入力してください\n52は5番目にありました\n添字 要素\n" + table);
 });
 
 test("公式サンプル: 見つからない場合", () => {
   assert.equal(run(officialSample, { arrayBase: 0, inputValues: ["85"] }),
-    "0～99の数字を入力してください\n85 は見つかりませんでした\n添字   要素\n" + table);
+    "0～99の数字を入力してください\n85は見つかりませんでした\n添字 要素\n" + table);
 });
 
 test("公式サンプル: コード→ブロック→コードで同じ結果になり、コメントも残る", () => {
@@ -103,7 +103,7 @@ test("減らしながら繰り返す", () => {
 });
 
 test("÷は商の整数部分、％は余り", () => {
-  assert.equal(run("表示する(7 ÷ 2, 7 ％ 2, 6 ÷ 3)"), "3 1 2\n");
+  assert.equal(run("表示する(7 ÷ 2, 7 ％ 2, 6 ÷ 3)"), "312\n");
   assert.match(errorOf("表示する(1 ÷ 0)").message, /0で割る/u);
 });
 
@@ -114,7 +114,7 @@ test("【外部からの入力】は入力値を順に読む", () => {
 });
 
 test("1行に複数の代入を書ける", () => {
-  assert.equal(run('a = 1 , b = 2, s = "x,y"\n表示する(a, b, s)'), "1 2 x,y\n");
+  assert.equal(run('a = 1 , b = 2, s = "x,y"\n表示する(a, b, s)'), "12x,y\n");
   assert.equal(run("A = [1, 2], n = 要素数(A)\n表示する(n)"), "2\n");
 });
 
@@ -123,17 +123,17 @@ test("スペースを省いた書き方", () => {
 });
 
 test("全角の記号・数字・空白を半角として読む（文字列の中はそのまま）", () => {
-  assert.equal(run("ｘ ＝ １２\nもし ｘ ＞ ３ ならば：\n　表示する（ｘ ％ ５, \"＝ＯＫ\"）"), "2 ＝ＯＫ\n");
-  assert.equal(run("表示する(5 − 2, 5 – 1)"), "3 4\n");
+  assert.equal(run("ｘ ＝ １２\nもし ｘ ＞ ３ ならば：\n　表示する（ｘ ％ ５, \"＝ＯＫ\"）"), "2＝ＯＫ\n");
+  assert.equal(run("表示する(5 − 2, 5 – 1)"), "34\n");
 });
 
 test("“”で囲んだ文字列も読み、半角の\"の中の“”はそのまま", () => {
-  assert.equal(run('表示する("彼は“はい”と言った", “全角”, ＂A＂, \'I’ll\')'), "彼は“はい”と言った 全角 A I’ll\n");
+  assert.equal(run('表示する("彼は“はい”と言った", “全角”, ＂A＂, \'I’ll\')'), "彼は“はい”と言った全角AI’ll\n");
 });
 
 test("二次元配列: 読み出し、書き込み、要素数", () => {
   const source = "Data = [[1, 2, 3], [4, 5, 6]]\nData[1, 2] = 9\n表示する(Data[0, 1], Data[1, 2], 要素数(Data), 要素数(Data[0]))";
-  assert.equal(run(source, { arrayBase: 0 }), "2 9 2 3\n");
+  assert.equal(run(source, { arrayBase: 0 }), "2923\n");
   assert.equal(roundTrip(source), source);
   assert.match(errorOf("D = [[1], [2]]\n表示する(D[0, 1])", { arrayBase: 0 }).message, /範囲外/u);
   assert.match(errorOf("D = [[[1]]]").message, /二次元/u);

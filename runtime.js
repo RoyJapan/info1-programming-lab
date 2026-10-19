@@ -578,7 +578,7 @@ export function runProgram(source, { arrayBase = 1, inputValues = [] } = {}) {
         record(node);
       } else if (node.type === "print") {
         tick(node);
-        const rendered = node.args.map((arg) => showValue(evaluate(arg))).join(" ") + "\n";
+        const rendered = node.args.map((arg) => showValue(evaluate(arg))).join("") + "\n";
         outputSize += rendered.length;
         if (outputSize > LIMITS.outputLength) throw new ProgramError("表示が20,000文字の上限に達しました。", node.line);
         output.push(rendered);
