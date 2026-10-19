@@ -450,7 +450,7 @@ function snapshotState(environment) {
   return Object.fromEntries([...environment.entries()].map(([key, value]) => [key, copyValue(value)]));
 }
 
-export function runProgram(source, { arrayBase = 1, inputValues = [] } = {}) {
+export function runProgram(source, { arrayBase = 0, inputValues = [] } = {}) {
   const program = parseProgram(source);
   const environment = new Map();
   const inputs = [...inputValues];

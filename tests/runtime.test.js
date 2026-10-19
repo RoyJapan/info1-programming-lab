@@ -49,12 +49,12 @@ const officialSample = [
 const table = [3, 18, 29, 33, 48, 52, 62, 77, 89, 97].map((value, index) => `${index} ${value}\n`).join("");
 
 test("公式サンプル: 見つかる場合", () => {
-  assert.equal(run(officialSample, { arrayBase: 0, inputValues: ["52"] }),
+  assert.equal(run(officialSample, { inputValues: ["52"] }),
     "0～99の数字を入力してください\n52は5番目にありました\n添字 要素\n" + table);
 });
 
 test("公式サンプル: 見つからない場合", () => {
-  assert.equal(run(officialSample, { arrayBase: 0, inputValues: ["85"] }),
+  assert.equal(run(officialSample, { inputValues: ["85"] }),
     "0～99の数字を入力してください\n85は見つかりませんでした\n添字 要素\n" + table);
 });
 
@@ -63,20 +63,24 @@ test("公式サンプル: コード→ブロック→コードで同じ結果に
   assert.match(source, /# 演算子÷は商の整数値を返す/u);
   assert.match(source, /そうでなくもし Data\[aida\]<atai ならば:/u);
   for (const input of ["52", "85", "3", "97"]) {
-    assert.equal(run(source, { arrayBase: 0, inputValues: [input] }), run(officialSample, { arrayBase: 0, inputValues: [input] }));
+    assert.equal(run(source, { inputValues: [input] }), run(officialSample, { inputValues: [input] }));
   }
   assert.equal(roundTrip(source), source);
 });
 
-test("仕様書の例は8を表示する", () => {
-  assert.equal(run("A = [3, 1, 4]\n合計 = 0\ni を 1 から 要素数(A) まで 1 ずつ増やしながら繰り返す:\n  合計 = 合計 + A[i]\n表示する(合計)"), "8\n");
+test("既定の配列添字は0始まり", () => {
+  assert.equal(run("A = [3, 1, 4]\n合計 = 0\ni を 0 から 要素数(A) - 1 まで 1 ずつ増やしながら繰り返す:\n  合計 = 合計 + A[i]\n表示する(合計)"), "8\n");
 });
 
 test("教材はすべて期待出力どおりで、往復してもコードが変わらない", () => {
   for (const lesson of lessons) {
-    assert.equal(run(lesson.code, { arrayBase: 1, inputValues: lesson.input }).trimEnd(), lesson.expected, lesson.id);
+    assert.equal(run(lesson.code, { inputValues: lesson.input }).trimEnd(), lesson.expected, lesson.id);
     assert.equal(roundTrip(lesson.code), lesson.code, lesson.id);
   }
+});
+
+test("1始まりは配列の設定で選べる", () => {
+  assert.equal(run("A = [3, 8]\n表示する(A[1], A[2])", { arrayBase: 1 }), "38\n");
 });
 
 test("コメント: 行全体、行末、文字列の中の#", () => {

@@ -34,7 +34,7 @@ const el = (tag, attrs = {}, text = "") => {
 const defaultCode = [
   "A = [3, 1, 4]",
   "合計 = 0",
-  "i を 1 から 要素数(A) まで 1 ずつ増やしながら繰り返す:",
+  "i を 0 から 要素数(A) - 1 まで 1 ずつ増やしながら繰り返す:",
   "  合計 = 合計 + A[i]",
   "表示する(\"合計：\", 合計)",
 ].join("\n");
@@ -51,7 +51,7 @@ function readSavedState() {
       inputValues: typeof saved.inputValues === "string" ? saved.inputValues.slice(0, 20_000) : "",
       prediction: typeof saved.prediction === "string" ? saved.prediction.slice(0, 20_000) : "",
       skipPrediction: saved.skipPrediction === true,
-      arrayBase: saved.arrayBase === 0 ? 0 : 1,
+      arrayBase: saved.arrayBase === 1 ? 1 : 0,
       records: Array.isArray(saved.records) ? saved.records.slice(0, 10) : [],
       lessonId: lessons.some((lesson) => lesson.id === saved.lessonId) ? saved.lessonId : null,
     };
@@ -176,7 +176,7 @@ function replaceDocument(data, action) {
   $("input-values").value = data.inputValues || "";
   $("prediction").value = data.prediction || "";
   $("skip-prediction").checked = data.skipPrediction === true;
-  $("array-base").value = String(data.arrayBase === 0 ? 0 : 1);
+  $("array-base").value = String(data.arrayBase === 1 ? 1 : 0);
   setCode(data.code || "", { history: false, save: false });
   resetHistory();
   if (!saveState(false)) showToast("この端末への保存に失敗しました。ページを閉じる前に書き出してください。");
@@ -376,7 +376,7 @@ function renderPalette() {
   appendPaletteGroup(content, "変数・配列", [
     { label: "x = 0", value: "x = 0" },
     { label: "配列 = []", value: "配列 = []" },
-    { label: "配列[1]", value: "配列[1]" },
+    { label: "配列[0]", value: "配列[0]" },
   ]);
   appendPaletteGroup(content, "演算子", ["+", "-", "*", "/", "÷", "%", "**", "==", "!=", "<", "<=", ">", ">=", "and", "or", "not"].map((value) => ({ label: value, value: " " + value + " " })));
   appendPaletteGroup(content, "関数・表示", [
@@ -391,7 +391,7 @@ function renderPalette() {
   appendPaletteGroup(content, "制御", [
     { label: "もし", value: "もし 条件 ならば:\n  \n" },
     { label: "そうでなくもし", value: "そうでなくもし 条件 ならば:\n  \n" },
-    { label: "繰返し", value: "i を 1 から 3 まで 1 ずつ増やしながら繰り返す:\n  \n" },
+    { label: "繰返し", value: "i を 0 から 2 まで 1 ずつ増やしながら繰り返す:\n  \n" },
     { label: "減らす繰返し", value: "i を 3 から 1 まで 1 ずつ減らしながら繰り返す:\n  \n" },
     { label: "条件繰返し", value: "条件 の間繰り返す:\n  \n" },
     { label: "すべての値を", value: "配列のすべての値を0にする" },
@@ -616,7 +616,7 @@ function renderLessonList(filter = "all") {
         inputValues: lesson.input.join("\n"),
         prediction: "",
         skipPrediction: false,
-        arrayBase: 1,
+        arrayBase: 0,
       }, lesson.title)) return;
       $("lesson-dialog").close();
       switchToCode();
@@ -792,7 +792,7 @@ function renderInitialState() {
     inputValues: "",
     prediction: "",
     skipPrediction: false,
-    arrayBase: 1,
+    arrayBase: 0,
     records: [],
   };
   $("program-title").value = initial.title;
@@ -850,7 +850,7 @@ document.querySelectorAll("[data-action]").forEach((button) => button.addEventLi
   button.closest("details")?.removeAttribute("open");
   const action = button.dataset.action;
   if (action === "new") {
-    if (replaceDocument({ code: "", title: "新しいプログラム", inputValues: "", prediction: "", skipPrediction: false, arrayBase: 1 }, "新規作成")) switchToCode();
+    if (replaceDocument({ code: "", title: "新しいプログラム", inputValues: "", prediction: "", skipPrediction: false, arrayBase: 0 }, "新規作成")) switchToCode();
   } else if (action === "lessons") openDialog("lesson-dialog");
   else if (action === "open") $("open-file").click();
   else if (action === "paste") {

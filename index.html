@@ -60,8 +60,8 @@
         <div class="editor-options">
           <label class="setting-label" for="array-base">配列の添字</label>
           <select id="array-base" aria-label="配列の添字の開始値">
-            <option value="0">0から</option>
-            <option value="1" selected>1から</option>
+            <option value="0" selected>0から（標準）</option>
+            <option value="1">1から</option>
           </select>
           <button id="code-mode" class="mode-button active" type="button" aria-pressed="true">コード</button>
           <button id="blocks-mode" class="mode-button" type="button" aria-pressed="false">ブロック</button>
@@ -166,11 +166,11 @@
   <dialog id="help-dialog" class="modal help-modal" aria-labelledby="help-heading">
     <div class="modal-heading"><div><p class="eyebrow">情報Ⅰ プログラミング演習室</p><h2 id="help-heading">使い方</h2></div><button class="close-button" type="button" data-close="help-dialog" aria-label="閉じる">×</button></div>
     <div class="help-body">
-      <h3>コードを書く</h3><p>左の欄に共通テスト風のプログラムを書きます。まずは教材を選ぶと、コードと入力値が入ります。</p>
+      <h3>コードを書く</h3><p>左の欄に共通テスト風のプログラムを書きます。配列の添字は0からが標準です。まずは教材を選ぶと、コードと入力値が入ります。</p>
       <h3>ブロックで組み立てる</h3><p>「ブロック」へ切り替えると、対応しているプログラムをブロックで編集できます。コード表示へ戻すと同じプログラムが反映されます。</p>
-      <h3>予想して実行する</h3><p>出力を予想欄に書いてから「実行する」を押します。Ctrl+Enterでも実行できます。記録はこの端末だけに保存されます。</p>
+      <h3>予想して実行する</h3><p>出力を予想欄に書いてから「実行」を押します。Ctrl+Enterでも実行できます。記録はこの端末だけに保存されます。</p>
       <h3>保存とプライバシー</h3><p>編集内容はブラウザー内に自動保存されます。別の端末へ移すときは「書き出し」を使ってください。コードを外部へ送信しません。</p>
-      <p class="muted">対応範囲：代入（1行に複数可）、一次元・二次元配列、すべての値を…にする、演算（÷を含む）、もし/そうでなくもし/そうでなければ、増やしながら/減らしながら/の間繰り返す、表示、【外部からの入力】、#コメント、要素数/最大値/最小値/整数/乱数。全角の記号や数字は半角として読みます。共通テスト用表記のすべてを実装するものではありません。乱数()は0以上1未満です。</p>
+      <p class="muted">対応範囲：代入（1行に複数可）、一次元・二次元配列（添字は0からが標準）、すべての値を…にする、演算（÷を含む）、もし/そうでなくもし/そうでなければ、増やしながら/減らしながら/の間繰り返す、表示、【外部からの入力】、#コメント、要素数/最大値/最小値/整数/乱数。全角の記号や数字は文字列の外では半角として読みます。共通テスト用表記のすべてを実装するものではありません。乱数()は0以上1未満です。</p>
     </div>
   </dialog>
 
