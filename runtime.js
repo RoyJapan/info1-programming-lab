@@ -61,13 +61,22 @@ function tokenizeExpression(source, line) {
       tokens.push({ type: "word", value, line });
       continue;
     }
+    if (ch === "【") {
+      const close = source.indexOf("】", i);
+      if (close < 0) throw new ProgramError("「【」が閉じていません。", line);
+      const label = source.slice(i + 1, close).trim();
+      if (label !== "外部からの入力") throw new ProgramError(`空欄「【${label}】」が残っています。式に書き換えてください。`, line);
+      tokens.push({ type: "input", value: "【外部からの入力】", line });
+      i = close + 1;
+      continue;
+    }
     const pair = source.slice(i, i + 2);
     if (["**", "==", "!=", "<=", ">="].includes(pair)) {
       tokens.push({ type: "op", value: pair, line });
       i += 2;
       continue;
     }
-    if ("+-*/%<>()[],".includes(ch)) {
+    if ("+-*/÷%<>()[],".includes(ch)) {
       tokens.push({ type: "op", value: ch, line });
       i += 1;
       continue;
@@ -78,7 +87,7 @@ function tokenizeExpression(source, line) {
   return tokens;
 }
 
-const PRECEDENCE = { or: 1, and: 2, "==": 3, "!=": 3, "<": 3, "<=": 3, ">": 3, ">=": 3, "+": 4, "-": 4, "*": 5, "/": 5, "%": 5, "**": 6 };
+const PRECEDENCE = { or: 1, and: 2, "==": 3, "!=": 3, "<": 3, "<=": 3, ">": 3, ">=": 3, "+": 4, "-": 4, "*": 5, "/": 5, "÷": 5, "%": 5, "**": 6 };
 
 function parseExpression(source, line) {
   const tokens = tokenizeExpression(source, line);
@@ -112,6 +121,10 @@ function parseExpression(source, line) {
       if (values.length > LIMITS.arrayLength) throw new ProgramError("配列が上限の1,000要素を超えています。", line);
       return postfix({ type: "array", values, line });
     }
+    if (token.type === "input") {
+      at += 1;
+      return { type: "call", name: "入力", args: [], line };
+    }
     if (token.type === "number" || token.type === "string") {
       at += 1;
       return { type: "literal", value: token.value, line };
@@ -128,9 +141,8 @@ function parseExpression(source, line) {
     let value = node;
     while (true) {
       if (take("[")) {
-        const index = expression(0);
+        do { value = { type: "index", target: value, index: expression(0), line }; } while (take(","));
         expect("]");
-        value = { type: "index", target: value, index, line };
       } else if (take("(")) {
         if (value.type !== "variable") throw new ProgramError("呼び出せるのは用意された関数だけです。", line);
         const args = [];
@@ -197,111 +209,210 @@ function splitArguments(source, line) {
   return parts;
 }
 
+const TARGET = /^([\p{L}_][\p{L}\p{N}_]*)\s*(?:\[([\s\S]+)\])?$/u;
+
 function parseTarget(source, line) {
-  const raw = source.trim();
-  const indexed = raw.match(/^([\p{L}_][\p{L}\p{N}_]*)\s*\[([\s\S]+)\]$/u);
-  if (indexed) return { type: "index", name: indexed[1], indexText: indexed[2].trim(), line };
-  if (/^[\p{L}_][\p{L}\p{N}_]*$/u.test(raw)) return { type: "variable", name: raw, line };
-  throw new ProgramError("代入先は変数名または配列の要素にしてください。", line);
+  const match = source.trim().match(TARGET);
+  if (!match) throw new ProgramError("代入先は変数名または配列の要素にしてください。", line);
+  if (match[2] === undefined) return { type: "variable", name: match[1], line };
+  const indexText = match[2].trim();
+  splitArguments(indexText, line).forEach((part) => parseExpression(part, line));
+  return { type: "index", name: match[1], indexText, line };
+}
+
+// 「==」「<=」などを除いた最初の「=」で、代入先と式に分ける。
+function splitAssignment(text) {
+  const match = text.match(/^(.+?)\s*(?<![=!<>])=(?!=)\s*([\s\S]+)$/u);
+  return match ? { left: match[1], right: match[2].trim() } : null;
+}
+
+function isAssignment(text) {
+  const assignment = splitAssignment(text);
+  return Boolean(assignment && TARGET.test(assignment.left.trim()));
+}
+
+function normalizeCode(text) {
+  return text.replace(/　/gu, "  ").normalize("NFKC").replace(/[−–]/gu, "-");
+}
+
+const QUOTES = { '"': '"', "'": "'", "“": '"', "”": '"', "＂": '"', "＇": "'" };
+
+// 文字列の外だけを半角にそろえ、「#」以降をコメントとして切り出す。
+// 全角や“”で始めた文字列は半角の引用符に置き換え、文字列の中身は変えない。
+function splitLine(raw) {
+  let code = "";
+  let plain = "";
+  let quote = "";
+  let closers = "";
+  for (let i = 0; i < raw.length; i += 1) {
+    const ch = raw[i];
+    if (quote) {
+      if (ch === "\\" && i + 1 < raw.length) code += ch + raw[++i];
+      else if (closers.includes(ch)) { code += quote; quote = ""; }
+      else code += ch;
+    } else if (QUOTES[ch]) {
+      quote = QUOTES[ch];
+      closers = ch === quote ? ch : quote === '"' ? '"“”＂' : "'＇";
+      code += normalizeCode(plain) + quote;
+      plain = "";
+    } else if (ch === "#" || ch === "＃") {
+      return { code: code + normalizeCode(plain), comment: raw.slice(i + 1).trimEnd() };
+    } else plain += ch;
+  }
+  return { code: code + normalizeCode(plain), comment: null };
+}
+
+function commentOf(row) {
+  return row.comment === null ? {} : { comment: row.comment };
 }
 
 export function parseProgram(source) {
   if (source.length > LIMITS.sourceLength) throw new ProgramError("ソースが20,000文字の上限を超えています。", 1);
   const lines = source.replace(/\r\n?/gu, "\n").split("\n").map((raw, index) => {
-    const expanded = raw.replace(/\t/gu, "  ");
-    const spaces = expanded.match(/^ */u)[0].length;
-    if (spaces % 2) throw new ProgramError("字下げは半角スペース2個単位にしてください。", index + 1);
-    return { raw: expanded, text: expanded.slice(spaces).trimEnd(), indent: spaces, line: index + 1 };
+    const { code, comment } = splitLine(raw.replace(/\t/gu, "  "));
+    const spaces = code.match(/^ */u)[0].length;
+    const text = code.slice(spaces).trimEnd();
+    if (text && spaces % 2) throw new ProgramError("字下げは半角スペース2個単位にしてください。", index + 1);
+    return { text, comment, indent: spaces, line: index + 1 };
   });
   let position = 0;
+
+  function nextCodeRow(from) {
+    return lines.slice(from).find((row) => row.text);
+  }
 
   function parseBlock(indent, depth) {
     if (depth > LIMITS.nesting) throw new ProgramError("構文の入れ子は30段までです。", lines[Math.max(position - 1, 0)]?.line ?? 1);
     const body = [];
     while (position < lines.length) {
       const row = lines[position];
-      if (!row.text) { position += 1; continue; }
+      if (!row.text) {
+        // コメントだけの行は、次のコードと同じブロックに入れる。
+        if (row.comment !== null) {
+          if (row.indent < indent && (nextCodeRow(position + 1)?.indent ?? -1) < indent) break;
+          body.push({ type: "comment", text: row.comment, line: row.line });
+        }
+        position += 1;
+        continue;
+      }
       if (row.indent < indent) break;
       if (row.indent > indent) throw new ProgramError("予期しない字下げです。ブロックは2スペースずつ字下げしてください。", row.line);
-      if (row.text === "そうでなければ:") throw new ProgramError("「そうでなければ」は「もし」の後に置いてください。", row.line);
+      if (/^そうでな(?:ければ|くもし)/u.test(row.text)) throw new ProgramError("「そうでなければ」「そうでなくもし」は「もし」の後に、同じ字下げで置いてください。", row.line);
       position += 1;
-      body.push(parseStatement(row, depth));
+      body.push(...parseLine(row, depth));
     }
     return body;
   }
 
-  function requireBlock(indent, line, depth) {
-    if (position < lines.length && lines[position].text && !lines[position].text.startsWith("#") && lines[position].indent > indent + 2) {
-      throw new ProgramError("字下げは2スペースずつにしてください。", lines[position].line);
-    }
+  function requireBlock(indent, depth) {
+    const next = nextCodeRow(position);
+    if (next && next.indent > indent + 2) throw new ProgramError("字下げは2スペースずつにしてください。", next.line);
     return parseBlock(indent + 2, depth + 1);
+  }
+
+  // 「a = 1 , b = 2」のように1行に並んだ代入は、別々の文として読む。
+  function parseLine(row, depth) {
+    let parts = [];
+    if (row.text.includes(",")) {
+      try { parts = splitArguments(row.text, row.line); } catch { parts = []; }
+    }
+    if (parts.length > 1 && parts.every(isAssignment)) {
+      const nodes = parts.map((part) => parseSimple(part, row));
+      Object.assign(nodes.at(-1), commentOf(row));
+      return nodes;
+    }
+    return [parseStatement(row, depth)];
+  }
+
+  function parseIf(condition, row, depth) {
+    parseExpression(condition, row.line);
+    const node = { type: "if", condition, then: requireBlock(row.indent, depth), otherwise: [], line: row.line, ...commentOf(row) };
+    const next = lines[position];
+    if (next?.indent !== row.indent) return node;
+    const elseIf = next.text.match(/^そうでなくもし\s*(.+?)\s*ならば\s*:$/u);
+    if (elseIf) {
+      position += 1;
+      node.otherwise = [parseIf(elseIf[1], next, depth)];
+      node.elseIf = true;
+    } else if (/^そうでなければ\s*:$/u.test(next.text)) {
+      position += 1;
+      node.otherwise = requireBlock(row.indent, depth);
+      if (next.comment !== null) node.elseComment = next.comment;
+    }
+    return node;
+  }
+
+  function parseSimple(text, row) {
+    let match = text.match(/^表示する\s*\(([\s\S]*)\)$/u);
+    if (match) {
+      const argsText = splitArguments(match[1], row.line);
+      return { type: "print", argsText, args: argsText.map((part) => parseExpression(part, row.line)), line: row.line };
+    }
+    match = text.match(/^([\p{L}_][\p{L}\p{N}_]*)\s*のすべての値を\s*(.+?)\s*にする$/u);
+    if (match) {
+      parseExpression(match[2], row.line);
+      return { type: "fill", name: match[1], expression: match[2], line: row.line };
+    }
+    const assignment = splitAssignment(text);
+    if (!assignment) return null;
+    const target = parseTarget(assignment.left, row.line);
+    parseExpression(assignment.right, row.line);
+    return { type: "assign", target, expression: assignment.right, line: row.line };
   }
 
   function parseStatement(row, depth) {
     if (depth > LIMITS.nesting) throw new ProgramError("構文の入れ子は30段までです。", row.line);
-    let match = row.text.match(/^もし\s+(.+?)\s+ならば\s*:\s*$/u);
+    let match = row.text.match(/^もし\s*(.+?)\s*ならば\s*:$/u);
+    if (match) return parseIf(match[1], row, depth);
+    match = row.text.match(/^([\p{L}_][\p{L}\p{N}_]*)\s*を\s*(.+?)\s*から\s*(.+?)\s*まで\s*(.+?)\s*ずつ(増や|減ら)しながら繰り返す\s*:$/u);
     if (match) {
-      const node = { type: "if", condition: match[1].trim(), then: requireBlock(row.indent, row.line, depth), otherwise: [], line: row.line };
-      const next = lines[position];
-      if (next?.indent === row.indent && next.text === "そうでなければ:") {
-        position += 1;
-        node.otherwise = requireBlock(row.indent, row.line, depth);
-      }
-      parseExpression(node.condition, row.line);
-      return node;
+      const [, name, start, end, step, way] = match;
+      [start, end, step].forEach((part) => parseExpression(part, row.line));
+      return { type: "for", name, start, end, step, down: way === "減ら", body: requireBlock(row.indent, depth), line: row.line, ...commentOf(row) };
     }
-    match = row.text.match(/^([\p{L}_][\p{L}\p{N}_]*)\s+を\s+(.+?)\s+から\s+(.+?)\s+まで\s+(.+?)\s+ずつ増やしながら繰り返す\s*:\s*$/u);
+    match = row.text.match(/^(.+?)\s*の間繰り返す\s*:$/u);
     if (match) {
-      const node = { type: "for", name: match[1], start: match[2].trim(), end: match[3].trim(), step: match[4].trim(), body: requireBlock(row.indent, row.line, depth), line: row.line };
-      parseExpression(node.start, row.line); parseExpression(node.end, row.line); parseExpression(node.step, row.line);
-      return node;
+      parseExpression(match[1], row.line);
+      return { type: "while", condition: match[1], body: requireBlock(row.indent, depth), line: row.line, ...commentOf(row) };
     }
-    match = row.text.match(/^(.+?)\s+の間繰り返す\s*:\s*$/u);
-    if (match) {
-      const node = { type: "while", condition: match[1].trim(), body: requireBlock(row.indent, row.line, depth), line: row.line };
-      parseExpression(node.condition, row.line);
-      return node;
-    }
-    match = row.text.match(/^表示する\s*\(([\s\S]*)\)\s*$/u);
-    if (match) {
-      const args = splitArguments(match[1], row.line).map((part) => parseExpression(part, row.line));
-      return { type: "print", argsText: splitArguments(match[1], row.line), line: row.line, args };
-    }
-    const assignment = row.text.match(/^(.+?)\s*=\s*([\s\S]+)$/u);
-    if (assignment) {
-      const target = parseTarget(assignment[1], row.line);
-      const expression = assignment[2].trim();
-      parseExpression(expression, row.line);
-      if (target.type === "index") parseExpression(target.indexText, row.line);
-      return { type: "assign", target, expression, line: row.line };
-    }
+    const simple = parseSimple(row.text, row);
+    if (simple) return { ...simple, ...commentOf(row) };
     throw new ProgramError("この行はまだ対応していません。代入、表示、条件、繰返しを確認してください。", row.line);
   }
 
-  const body = parseBlock(0, 0);
-  return body;
+  return parseBlock(0, 0);
 }
 
 function indent(level) { return "  ".repeat(level); }
 
 export function programToSource(program) {
   const lines = [];
+  const note = (comment) => (comment == null ? "" : " #" + comment);
+  function writeIf(node, depth, keyword) {
+    const pad = indent(depth);
+    lines.push(`${pad}${keyword} ${node.condition} ならば:${note(node.comment)}`);
+    write(node.then, depth + 1);
+    if (node.elseIf && node.otherwise.length === 1 && node.otherwise[0].type === "if") writeIf(node.otherwise[0], depth, "そうでなくもし");
+    else if (node.otherwise.length) {
+      lines.push(`${pad}そうでなければ:${note(node.elseComment)}`);
+      write(node.otherwise, depth + 1);
+    }
+  }
   function write(nodes, depth) {
     for (const node of nodes) {
       const pad = indent(depth);
-      if (node.type === "assign") {
+      if (node.type === "comment") lines.push(`${pad}#${node.text}`);
+      else if (node.type === "assign") {
         const target = node.target.type === "variable" ? node.target.name : `${node.target.name}[${node.target.indexText}]`;
-        lines.push(`${pad}${target} = ${node.expression}`);
-      } else if (node.type === "print") lines.push(`${pad}表示する(${node.argsText.join(", ")})`);
-      else if (node.type === "if") {
-        lines.push(`${pad}もし ${node.condition} ならば:`);
-        write(node.then, depth + 1);
-        if (node.otherwise.length) { lines.push(`${pad}そうでなければ:`); write(node.otherwise, depth + 1); }
-      } else if (node.type === "for") {
-        lines.push(`${pad}${node.name} を ${node.start} から ${node.end} まで ${node.step} ずつ増やしながら繰り返す:`);
+        lines.push(`${pad}${target} = ${node.expression}${note(node.comment)}`);
+      } else if (node.type === "fill") lines.push(`${pad}${node.name}のすべての値を${node.expression}にする${note(node.comment)}`);
+      else if (node.type === "print") lines.push(`${pad}表示する(${node.argsText.join(", ")})${note(node.comment)}`);
+      else if (node.type === "if") writeIf(node, depth, "もし");
+      else if (node.type === "for") {
+        lines.push(`${pad}${node.name} を ${node.start} から ${node.end} まで ${node.step} ずつ${node.down ? "減らし" : "増やし"}ながら繰り返す:${note(node.comment)}`);
         write(node.body, depth + 1);
       } else if (node.type === "while") {
-        lines.push(`${pad}${node.condition} の間繰り返す:`);
+        lines.push(`${pad}${node.condition} の間繰り返す:${note(node.comment)}`);
         write(node.body, depth + 1);
       }
     }
@@ -312,6 +423,10 @@ export function programToSource(program) {
 
 function copyValue(value) {
   return Array.isArray(value) ? value.map(copyValue) : value;
+}
+
+function dimensions(value) {
+  return Array.isArray(value) ? 1 + Math.max(0, ...value.map(dimensions)) : 0;
 }
 
 function showValue(value) {
@@ -352,10 +467,19 @@ export function runProgram(source, { arrayBase = 1, inputValues = [] } = {}) {
   }
 
   function record(node) {
-    const cellCount = [...environment.values()].reduce((sum, value) => sum + (Array.isArray(value) ? value.length : 1), 0);
+    const cellCount = [...environment.values()].reduce((sum, value) => sum + (Array.isArray(value) ? value.flat().length : 1), 0);
     traceCells += cellCount;
     if (traceCells > LIMITS.traceCells) throw new ProgramError("トレースの変数データが100,000件の上限に達しました。", node.line);
     trace.push({ line: node.line, variables: snapshotState(environment), output: output.join("") });
+  }
+
+  function elementIndex(array, value, line) {
+    if (!Array.isArray(array)) throw new ProgramError("配列の要素を指定してください。", line);
+    const index = numberValue(value, line);
+    if (!Number.isInteger(index)) throw new ProgramError("配列の添字には整数を使ってください。", line);
+    const internal = index - arrayBase;
+    if (internal < 0 || internal >= array.length) throw new ProgramError(`配列の範囲外です（${arrayBase}始まり、${arrayBase}～${arrayBase + array.length - 1}）。`, line);
+    return internal;
   }
 
   function evaluate(node) {
@@ -366,18 +490,13 @@ export function runProgram(source, { arrayBase = 1, inputValues = [] } = {}) {
     }
     if (node.type === "array") {
       if (node.values.length > LIMITS.arrayLength) throw new ProgramError("配列が上限の1,000要素を超えています。", node.line);
-      const values = node.values.map(evaluate);
-      if (values.some(Array.isArray)) throw new ProgramError("配列は一次元だけに対応しています。", node.line);
+      const values = node.values.map((value) => copyValue(evaluate(value)));
+      if (dimensions(values) > 2) throw new ProgramError("配列は二次元までです。", node.line);
       return values;
     }
     if (node.type === "index") {
       const array = evaluate(node.target);
-      if (!Array.isArray(array)) throw new ProgramError("配列の要素を指定してください。", node.line);
-      const index = numberValue(evaluate(node.index), node.line);
-      if (!Number.isInteger(index)) throw new ProgramError("配列の添字には整数を使ってください。", node.line);
-      const internal = index - arrayBase;
-      if (internal < 0 || internal >= array.length) throw new ProgramError(`配列の範囲外です（${arrayBase}始まり、${arrayBase}～${arrayBase + array.length - 1}）。`, node.line);
-      return array[internal];
+      return array[elementIndex(array, evaluate(node.index), node.line)];
     }
     if (node.type === "unary") {
       const value = evaluate(node.value);
@@ -420,13 +539,10 @@ export function runProgram(source, { arrayBase = 1, inputValues = [] } = {}) {
       if (node.op === "+") return a + b;
       if (node.op === "-") return a - b;
       if (node.op === "*") return a * b;
-      if (node.op === "/") {
+      if (node.op === "/" || node.op === "÷" || node.op === "%") {
         if (b === 0) throw new ProgramError("0で割ることはできません。", node.line);
-        return a / b;
-      }
-      if (node.op === "%") {
-        if (b === 0) throw new ProgramError("0で割ることはできません。", node.line);
-        return a % b;
+        if (node.op === "/") return a / b;
+        return node.op === "÷" ? Math.trunc(a / b) : a % b;
       }
       const result = a ** b;
       if (!Number.isFinite(result)) throw new ProgramError("計算結果が大きすぎます。", node.line);
@@ -442,16 +558,23 @@ export function runProgram(source, { arrayBase = 1, inputValues = [] } = {}) {
         const value = evaluate(parseExpression(node.expression, node.line));
         if (node.target.type === "variable") environment.set(node.target.name, copyValue(value));
         else {
-          if (!environment.has(node.target.name) || !Array.isArray(environment.get(node.target.name))) throw new ProgramError(`配列「${node.target.name}」に値がありません。`, node.line);
-          const array = [...environment.get(node.target.name)];
-          const index = numberValue(evaluate(parseExpression(node.target.indexText, node.line)), node.line);
-          if (!Number.isInteger(index)) throw new ProgramError("配列の添字には整数を使ってください。", node.line);
-          const internal = index - arrayBase;
-          if (internal < 0 || internal >= array.length) throw new ProgramError(`配列の範囲外です（${arrayBase}始まり）。`, node.line);
-          if (Array.isArray(value)) throw new ProgramError("配列の中に配列は入れられません。", node.line);
-          array[internal] = copyValue(value);
-          environment.set(node.target.name, array);
+          const root = environment.get(node.target.name);
+          if (!Array.isArray(root)) throw new ProgramError(`配列「${node.target.name}」に値がありません。`, node.line);
+          const indices = splitArguments(node.target.indexText, node.line).map((part) => evaluate(parseExpression(part, node.line)));
+          let array = root;
+          indices.slice(0, -1).forEach((index) => { array = array[elementIndex(array, index, node.line)]; });
+          array[elementIndex(array, indices.at(-1), node.line)] = copyValue(value);
+          if (dimensions(root) > 2) throw new ProgramError("配列は二次元までです。", node.line);
         }
+        record(node);
+      } else if (node.type === "fill") {
+        tick(node);
+        const array = environment.get(node.name);
+        if (!Array.isArray(array)) throw new ProgramError(`配列「${node.name}」に値がありません。`, node.line);
+        const value = evaluate(parseExpression(node.expression, node.line));
+        if (Array.isArray(value)) throw new ProgramError("すべての値には配列以外の値を指定してください。", node.line);
+        const fill = (items) => items.map((item) => (Array.isArray(item) ? fill(item) : value));
+        environment.set(node.name, fill(array));
         record(node);
       } else if (node.type === "print") {
         tick(node);
@@ -470,7 +593,7 @@ export function runProgram(source, { arrayBase = 1, inputValues = [] } = {}) {
         const end = numberValue(evaluate(parseExpression(node.end, node.line)), node.line);
         const step = numberValue(evaluate(parseExpression(node.step, node.line)), node.line);
         if (![start, end, step].every(Number.isInteger) || step <= 0) throw new ProgramError("繰返しの開始・終了・増分には整数を使い、増分は1以上にしてください。", node.line);
-        for (let value = start; value <= end; value += step) {
+        for (let value = start; node.down ? value >= end : value <= end; value += node.down ? -step : step) {
           tick(node);
           environment.set(node.name, value);
           record(node);

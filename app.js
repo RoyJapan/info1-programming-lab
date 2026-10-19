@@ -103,16 +103,19 @@ function scheduleSave() {
   state.saveTimer = setTimeout(() => saveState(false), 350);
 }
 
+function commitHistory() {
+  clearTimeout(state.historyTimer);
+  const value = code.value;
+  if (state.history[state.historyIndex] === value) return;
+  state.history = state.history.slice(0, state.historyIndex + 1);
+  state.history.push(value);
+  if (state.history.length > 100) state.history.shift();
+  state.historyIndex = state.history.length - 1;
+}
+
 function scheduleHistory() {
   clearTimeout(state.historyTimer);
-  state.historyTimer = setTimeout(() => {
-    const value = code.value;
-    if (state.history[state.historyIndex] === value) return;
-    state.history = state.history.slice(0, state.historyIndex + 1);
-    state.history.push(value);
-    if (state.history.length > 100) state.history.shift();
-    state.historyIndex = state.history.length - 1;
-  }, 400);
+  state.historyTimer = setTimeout(commitHistory, 400);
 }
 
 function resetHistory() {
@@ -247,7 +250,7 @@ function clearTrace() {
   $("trace-pause").disabled = true;
   $("trace-next").disabled = true;
   updateLineNumbers();
-  if ($("tab-trace-help").getAttribute("aria-selected") === "true") renderAssist("trace");
+  if ($("tab-trace-help").getAttribute("aria-selected") === "true") renderTraceTable();
 }
 
 function formatVariable(value) {
@@ -356,7 +359,7 @@ function renderPalette() {
     { label: "配列 = []", value: "配列 = []" },
     { label: "配列[1]", value: "配列[1]" },
   ]);
-  appendPaletteGroup(content, "演算子", ["+", "-", "*", "/", "%", "**", "==", "!=", "<", "<=", ">", ">=", "and", "or", "not"].map((value) => ({ label: value, value: " " + value + " " })));
+  appendPaletteGroup(content, "演算子", ["+", "-", "*", "/", "÷", "%", "**", "==", "!=", "<", "<=", ">", ">=", "and", "or", "not"].map((value) => ({ label: value, value: " " + value + " " })));
   appendPaletteGroup(content, "関数・表示", [
     { label: "表示する()", value: "表示する()" },
     { label: "要素数()", value: "要素数()" },
@@ -364,12 +367,16 @@ function renderPalette() {
     { label: "最小値()", value: "最小値()" },
     { label: "整数()", value: "整数()" },
     { label: "乱数()", value: "乱数()" },
-    { label: "入力()", value: "入力()" },
+    { label: "【外部からの入力】", value: "【外部からの入力】" },
   ]);
   appendPaletteGroup(content, "制御", [
     { label: "もし", value: "もし 条件 ならば:\n  \n" },
+    { label: "そうでなくもし", value: "そうでなくもし 条件 ならば:\n  \n" },
     { label: "繰返し", value: "i を 1 から 3 まで 1 ずつ増やしながら繰り返す:\n  \n" },
+    { label: "減らす繰返し", value: "i を 3 から 1 まで 1 ずつ減らしながら繰り返す:\n  \n" },
     { label: "条件繰返し", value: "条件 の間繰り返す:\n  \n" },
+    { label: "すべての値を", value: "配列のすべての値を0にする" },
+    { label: "# コメント", value: "# " },
   ]);
 }
 
@@ -377,12 +384,12 @@ function renderInputHelp() {
   const content = $("assist-content");
   content.replaceChildren();
   content.append(el("p", { className: "assist-note" }, "実行時に読む値は、下の「入力」タブに1行ずつ入力します。"));
-  const button = el("button", { type: "button", className: "primary-button" }, "入力() を挿入");
-  button.addEventListener("click", () => insertAtCursor("入力()"));
+  const button = el("button", { type: "button", className: "primary-button" }, "【外部からの入力】 を挿入");
+  button.addEventListener("click", () => insertAtCursor("【外部からの入力】"));
   content.append(button);
   const note = el("div", { className: "palette-group" });
   note.append(el("div", { className: "palette-name" }, "入力順"));
-  note.append(el("div", { className: "palette-items" }, "上の行から順に読みます。数値は数値として、それ以外は文字列として扱います。値が不足すると、その行で停止します。"));
+  note.append(el("div", { className: "palette-items" }, "上の行から順に読みます。数値は数値として、それ以外は文字列として扱います。値が不足すると、その行で停止します。入力() と書いても同じです。"));
   content.append(note);
   const funcs = el("div", { className: "palette-group" });
   funcs.append(el("div", { className: "palette-name" }, "関数"));
@@ -395,6 +402,8 @@ function makeBlock(type) {
   if (type === "print") return { type, argsText: ['"こんにちは"'], args: [], line: 1 };
   if (type === "if") return { type, condition: "x == 1", then: [], otherwise: [], line: 1 };
   if (type === "for") return { type, name: "i", start: "1", end: "3", step: "1", body: [], line: 1 };
+  if (type === "fill") return { type, name: "A", expression: "0", line: 1 };
+  if (type === "comment") return { type, text: " メモ", line: 1 };
   return { type: "while", condition: "x < 3", body: [], line: 1 };
 }
 
@@ -467,7 +476,7 @@ function addChildSection(parent, nodes, title) {
 function renderBlockCard(node, nodes, index) {
   const card = el("article", { className: "block-card", dataset: { kind: node.type } });
   const main = el("div", { className: "block-main" });
-  const labels = { assign: "代入", print: "表示", if: "条件分岐", for: "回数繰返し", while: "条件繰返し" };
+  const labels = { assign: "代入", print: "表示", if: "条件分岐", for: "回数繰返し", while: "条件繰返し", fill: "すべての値", comment: "コメント" };
   main.append(el("span", { className: "block-label" }, labels[node.type] || "ブロック"));
   if (node.type === "assign") {
     const target = node.target.type === "variable" ? node.target.name : node.target.name + "[" + node.target.indexText + "]";
@@ -486,12 +495,20 @@ function renderBlockCard(node, nodes, index) {
   } else if (node.type === "if" || node.type === "while") {
     main.append(editBlockField(node, "条件式", node.condition, (value) => { node.condition = value; }));
   } else if (node.type === "for") {
-    const header = node.name + " を " + node.start + " から " + node.end + " まで " + node.step + " ずつ";
+    const header = node.name + " を " + node.start + " から " + node.end + " まで " + node.step + " ずつ" + (node.down ? "減らしながら" : "増やしながら");
     main.append(editBlockField(node, "繰返しの範囲", header, (value) => {
-      const match = value.match(/^([\p{L}_][\p{L}\p{N}_]*)\s+を\s+(.+?)\s+から\s+(.+?)\s+まで\s+(.+?)\s+ずつ$/u);
-      if (match) { node.name = match[1]; node.start = match[2]; node.end = match[3]; node.step = match[4]; }
+      const match = value.match(/^([\p{L}_][\p{L}\p{N}_]*)\s*を\s*(.+?)\s*から\s*(.+?)\s*まで\s*(.+?)\s*ずつ\s*(増や|減ら)?(?:しながら)?$/u);
+      if (match) { node.name = match[1]; node.start = match[2]; node.end = match[3]; node.step = match[4]; if (match[5]) node.down = match[5] === "減ら"; }
       else node.name = value;
     }));
+  } else if (node.type === "fill") {
+    main.append(editBlockField(node, "すべての値を同じ値にする", node.name + "のすべての値を" + node.expression + "にする", (value) => {
+      const match = value.trim().match(/^([\p{L}_][\p{L}\p{N}_]*)\s*のすべての値を\s*(.+?)\s*にする$/u);
+      if (match) { node.name = match[1]; node.expression = match[2]; }
+      else node.name = "";
+    }));
+  } else if (node.type === "comment") {
+    main.append(editBlockField(node, "コメント", node.text.trim(), (value) => { node.text = " " + value; }));
   }
   addNodeButtons(main, nodes, index);
   card.append(main);
@@ -822,10 +839,10 @@ document.querySelectorAll("[data-action]").forEach((button) => button.addEventLi
   } else if (action === "save") saveState(true);
   else if (action === "export") exportProgram();
   else if (action === "undo") {
-    clearTimeout(state.historyTimer);
+    commitHistory();
     if (state.historyIndex > 0) { state.historyIndex -= 1; setCode(state.history[state.historyIndex], { history: false }); }
   } else if (action === "redo") {
-    clearTimeout(state.historyTimer);
+    commitHistory();
     if (state.historyIndex < state.history.length - 1) { state.historyIndex += 1; setCode(state.history[state.historyIndex], { history: false }); }
   } else if (action === "duplicate") transformSelectedLines("duplicate");
   else if (action === "delete") transformSelectedLines("delete");

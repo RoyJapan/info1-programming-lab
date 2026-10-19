@@ -71,6 +71,8 @@
             <option value="if">もし</option>
             <option value="for">回数繰返し</option>
             <option value="while">条件繰返し</option>
+            <option value="fill">すべての値を</option>
+            <option value="comment">コメント</option>
           </select>
           <button id="add-block" class="primary-button" type="button">追加</button>
         </div>
@@ -113,7 +115,7 @@
             </div>
           </section>
           <section class="result-view input-view" data-view="input" aria-label="入力値" hidden>
-            <label for="input-values">`入力()` が読む値を1行ずつ入力</label>
+            <label for="input-values">【外部からの入力】が読む値を1行ずつ入力</label>
             <textarea id="input-values" rows="7" placeholder="例：\n12\n名前"></textarea>
             <p class="muted">数値として読める値は数値、それ以外は文字列として使われます。</p>
           </section>
@@ -150,7 +152,7 @@
       <h3>ブロックで組み立てる</h3><p>「ブロック」へ切り替えると、対応しているプログラムをブロックで編集できます。コード表示へ戻すと同じプログラムが反映されます。</p>
       <h3>予想して実行する</h3><p>出力を予想欄に書いてから「実行する」を押します。Ctrl+Enterでも実行できます。記録はこの端末だけに保存されます。</p>
       <h3>保存とプライバシー</h3><p>編集内容はブラウザー内に自動保存されます。別の端末へ移すときは「書き出し」を使ってください。コードを外部へ送信しません。</p>
-      <p class="muted">対応範囲：代入、配列、演算、条件分岐、繰返し、表示、入力、要素数/最大値/最小値/整数/乱数。共通テスト用表記のすべてを実装するものではありません。乱数()は0以上1未満です。</p>
+      <p class="muted">対応範囲：代入（1行に複数可）、一次元・二次元配列、すべての値を…にする、演算（÷を含む）、もし/そうでなくもし/そうでなければ、増やしながら/減らしながら/の間繰り返す、表示、【外部からの入力】、#コメント、要素数/最大値/最小値/整数/乱数。全角の記号や数字は半角として読みます。共通テスト用表記のすべてを実装するものではありません。乱数()は0以上1未満です。</p>
     </div>
   </dialog>
 
