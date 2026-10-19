@@ -1,0 +1,19 @@
+{
+  "name": "情報Ⅰ プログラミング演習室",
+  "short_name": "情報Ⅰ演習室",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f0f1",
+  "theme_color": "#5e202d",
+  "description": "共通テスト風プログラムをコードとブロックで学ぶ端末内エディタ。",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

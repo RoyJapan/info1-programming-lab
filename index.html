@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#5e202d">
+  <meta name="description" content="共通テスト風のプログラムを、コードとブロックで作って端末内で実行する情報Ⅰ学習エディタ。">
+  <title>情報Ⅰ プログラミング演習室</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="情報Ⅰ プログラミング演習室 ホーム">情報Ⅰ <span>プログラミング演習室</span></a>
+    <label class="program-title-label" for="program-title">プログラム名</label>
+    <input id="program-title" class="program-title" value="新しいプログラム" maxlength="80" aria-label="プログラム名">
+    <span class="local-badge"><span aria-hidden="true">●</span> 端末内で実行</span>
+    <button id="help-button" class="header-help" type="button">？ 使い方</button>
+  </header>
+
+  <nav class="toolbar" aria-label="プログラム操作">
+    <button data-action="new" type="button"><span aria-hidden="true">＋</span> 新規</button>
+    <button data-action="lessons" class="toolbar-highlight" type="button"><span aria-hidden="true">▤</span> 教材</button>
+    <button data-action="open" type="button"><span aria-hidden="true">▱</span> 開く</button>
+    <button data-action="paste" type="button"><span aria-hidden="true">▣</span> 貼り付け</button>
+    <button data-action="save" type="button"><span aria-hidden="true">▣</span> 保存</button>
+    <span class="toolbar-divider" aria-hidden="true"></span>
+    <button data-action="undo" type="button" aria-label="元に戻す">↶ 元に戻す</button>
+    <button data-action="redo" type="button" aria-label="やり直す">↷ やり直し</button>
+    <button data-action="duplicate" type="button">▢ 複製</button>
+    <button data-action="delete" type="button">⌫ 削除</button>
+    <span class="toolbar-divider" aria-hidden="true"></span>
+    <button data-action="move-up" type="button" aria-label="選択行を上へ">↑ 行</button>
+    <button data-action="move-down" type="button" aria-label="選択行を下へ">↓ 行</button>
+    <button data-action="outdent" type="button" aria-label="インデントを減らす">⇤ 段落</button>
+    <button data-action="indent" type="button" aria-label="インデントを増やす">⇥ 段落</button>
+    <button data-action="export" class="toolbar-spacer" type="button">⇩ 書き出し</button>
+  </nav>
+  <input id="open-file" class="visually-hidden" type="file" accept="application/json,.json">
+
+  <main class="workspace">
+    <section class="editor-panel panel" aria-labelledby="editor-heading">
+      <div class="panel-heading editor-heading">
+        <div>
+          <h1 id="editor-heading">プログラム</h1>
+          <span id="line-count" class="muted">1行</span>
+        </div>
+        <div class="editor-options">
+          <label class="setting-label" for="array-base">配列の添字</label>
+          <select id="array-base" aria-label="配列の添字の開始値">
+            <option value="0">0から</option>
+            <option value="1" selected>1から</option>
+          </select>
+          <button id="code-mode" class="mode-button active" type="button" aria-pressed="true">コード</button>
+          <button id="blocks-mode" class="mode-button" type="button" aria-pressed="false">ブロック</button>
+        </div>
+      </div>
+
+      <div id="code-view" class="code-view">
+        <div id="line-numbers" class="line-numbers" aria-hidden="true">1</div>
+        <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="プログラムのコード" wrap="off"></textarea>
+      </div>
+      <div id="blocks-view" class="blocks-view" hidden>
+        <div class="block-add-row">
+          <label for="new-block-type">ブロックを追加</label>
+          <select id="new-block-type">
+            <option value="assign">代入</option>
+            <option value="print">表示</option>
+            <option value="if">もし</option>
+            <option value="for">回数繰返し</option>
+            <option value="while">条件繰返し</option>
+          </select>
+          <button id="add-block" class="primary-button" type="button">追加</button>
+        </div>
+        <p id="blocks-message" class="muted blocks-message">コードをブロックに変換します。</p>
+        <div id="block-tree" class="block-tree" aria-label="プログラムブロック"></div>
+      </div>
+      <div class="editor-footer">
+        <span id="save-status" role="status">この端末に保存されます</span>
+        <span>Tabで字下げ ・ Ctrl+Enterで実行</span>
+      </div>
+    </section>
+
+    <aside class="side-column">
+      <section class="assist-panel panel" aria-label="編集補助">
+        <div class="tabs" role="tablist" aria-label="編集補助">
+          <button class="tab active" id="tab-block-palette" role="tab" aria-selected="true" aria-controls="assist-content" data-assist="palette" type="button">ブロックを追加</button>
+          <button class="tab" id="tab-input-help" role="tab" aria-selected="false" aria-controls="assist-content" data-assist="help" type="button">入力補助</button>
+          <button class="tab" id="tab-trace-help" role="tab" aria-selected="false" aria-controls="assist-content" data-assist="trace" type="button">トレース</button>
+        </div>
+        <div id="assist-content" class="assist-content" role="tabpanel" aria-labelledby="tab-block-palette"></div>
+      </section>
+
+      <section class="results-panel panel" aria-label="実行と結果">
+        <div class="tabs result-tabs" role="tablist" aria-label="実行パネル">
+          <button class="tab active" data-result="result" role="tab" aria-selected="true" type="button">結果 <span id="result-dot" class="result-dot" aria-hidden="true"></span></button>
+          <button class="tab" data-result="input" role="tab" aria-selected="false" type="button">入力</button>
+          <button class="tab" data-result="record" role="tab" aria-selected="false" type="button">記録</button>
+        </div>
+        <div class="result-content">
+          <section class="result-view active" data-view="result" aria-label="実行結果">
+            <div class="prediction-area">
+              <label for="prediction">予想 <span>(実行する前に、出力を予想して書こう)</span></label>
+              <label class="checkbox-label"><input id="skip-prediction" type="checkbox"> 予想しないで実行</label>
+              <textarea id="prediction" rows="4" placeholder="例）合計は8です"></textarea>
+              <div id="comparison" class="comparison" aria-live="polite"></div>
+            </div>
+            <div class="output-area">
+              <div class="output-heading"><strong>実行結果</strong><button id="run-button" class="run-button" type="button"><span aria-hidden="true">▶</span> 実行する</button></div>
+              <pre id="output" class="output" aria-live="polite">左に予想を書いてから実行しよう。</pre>
+            </div>
+          </section>
+          <section class="result-view input-view" data-view="input" aria-label="入力値" hidden>
+            <label for="input-values">`入力()` が読む値を1行ずつ入力</label>
+            <textarea id="input-values" rows="7" placeholder="例：\n12\n名前"></textarea>
+            <p class="muted">数値として読める値は数値、それ以外は文字列として使われます。</p>
+          </section>
+          <section class="result-view record-view" data-view="record" aria-label="実行記録" hidden>
+            <div class="record-heading"><strong>実行記録</strong><button id="clear-records" type="button" class="quiet-button">記録を消去</button></div>
+            <ol id="run-records" class="run-records"><li class="muted">まだ実行記録はありません。</li></ol>
+          </section>
+        </div>
+        <div id="trace-controls" class="trace-controls" hidden>
+          <button id="trace-play" type="button" class="primary-button">▶ 自動再生</button>
+          <button id="trace-pause" type="button" class="quiet-button" disabled>一時停止</button>
+          <button id="trace-next" type="button" class="quiet-button" disabled>1ステップ進む</button>
+          <span id="trace-position" class="muted">実行後にトレースできます</span>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="lesson-dialog" class="modal lesson-modal" aria-labelledby="lesson-heading">
+    <div class="modal-heading"><div><p class="eyebrow">学習教材</p><h2 id="lesson-heading">教材からプログラムを選ぶ</h2></div><button class="close-button" type="button" data-close="lesson-dialog" aria-label="閉じる">×</button></div>
+    <div class="lesson-filters" role="tablist" aria-label="教材の種類">
+      <button class="tab active" data-lesson-filter="all" type="button">すべて</button>
+      <button class="tab" data-lesson-filter="past" type="button">過去問題材</button>
+      <button class="tab" data-lesson-filter="forecast" type="button">2027予想</button>
+    </div>
+    <div id="lesson-list" class="lesson-list"></div>
+    <p class="copyright-note">過去問の文章・図・コードを転載せず、出題の考え方を参考にした独自教材です。予想問題は出題を保証しません。</p>
+  </dialog>
+
+  <dialog id="help-dialog" class="modal help-modal" aria-labelledby="help-heading">
+    <div class="modal-heading"><div><p class="eyebrow">情報Ⅰ プログラミング演習室</p><h2 id="help-heading">使い方</h2></div><button class="close-button" type="button" data-close="help-dialog" aria-label="閉じる">×</button></div>
+    <div class="help-body">
+      <h3>コードを書く</h3><p>左の欄に共通テスト風のプログラムを書きます。まずは教材を選ぶと、コードと入力値が入ります。</p>
+      <h3>ブロックで組み立てる</h3><p>「ブロック」へ切り替えると、対応しているプログラムをブロックで編集できます。コード表示へ戻すと同じプログラムが反映されます。</p>
+      <h3>予想して実行する</h3><p>出力を予想欄に書いてから「実行する」を押します。Ctrl+Enterでも実行できます。記録はこの端末だけに保存されます。</p>
+      <h3>保存とプライバシー</h3><p>編集内容はブラウザー内に自動保存されます。別の端末へ移すときは「書き出し」を使ってください。コードを外部へ送信しません。</p>
+      <p class="muted">対応範囲：代入、配列、演算、条件分岐、繰返し、表示、入力、要素数/最大値/最小値/整数/乱数。共通テスト用表記のすべてを実装するものではありません。乱数()は0以上1未満です。</p>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
