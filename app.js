@@ -50,6 +50,8 @@ const previousDefaultCode = [
   "表示する(\"合計：\", 合計)",
 ].join("\n");
 
+const ONE_BASED_NOTICE = "1から数える設定で保存されたプログラムです。要素の番号は0から数えるので、番号を直すか教材を読み込み直してください。";
+
 function readSavedState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -65,6 +67,7 @@ function readSavedState() {
       skipPrediction: saved.skipPrediction === true,
       records: Array.isArray(saved.records) ? saved.records.slice(0, 10) : [],
       lessonId: lessons.some((lesson) => lesson.id === saved.lessonId) ? saved.lessonId : null,
+      oneBased: saved.arrayBase === 1 && !migrateStarter,
     };
   } catch {
     return null;
@@ -1036,7 +1039,7 @@ async function openProgramFile(file) {
     const parsed = JSON.parse(await file.text());
     const data = validateImport(parsed);
     if (!data) { showToast("このファイル形式には対応していません。現在の内容は変更していません。"); return; }
-    if (replaceDocument(data, "ファイルを開く")) showToast("ファイルを開きました。");
+    if (replaceDocument(data, "ファイルを開く")) showToast(data.arrayBase === 1 ? ONE_BASED_NOTICE : "ファイルを開きました。");
   } catch {
     showToast("JSONを読み取れません。現在の内容は変更していません。");
   } finally {
@@ -1182,6 +1185,7 @@ function renderInitialState() {
   renderBlockPalette();
   updateRunButtonState();
   switchToBlocks();
+  if (initial.oneBased) showToast(ONE_BASED_NOTICE);
 }
 
 code.addEventListener("input", () => {
@@ -1191,6 +1195,12 @@ code.addEventListener("input", () => {
   clearTrace();
 });
 code.addEventListener("scroll", () => { $("line-numbers").scrollTop = code.scrollTop; });
+$("blocks-view").addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    event.preventDefault();
+    executeProgram();
+  }
+});
 code.addEventListener("keydown", (event) => {
   if (event.key === "Tab") {
     event.preventDefault();
@@ -1211,7 +1221,7 @@ $("blocks-mode").addEventListener("click", switchToBlocks);
 $("block-stage").addEventListener("click", (event) => {
   if (performance.now() - state.blockDragEnd < 400 || event.target.closest("button, select")) return;
   const pill = event.target.closest(".rb");
-  if (pill && !event.target.closest("input")) setExpressionTarget(pill);
+  if (!event.target.closest("input")) setExpressionTarget(pill);
   selectBlockTarget(event.target.closest(".block-card, .block-children") ?? $("block-tree"));
 });
 $("block-stage").addEventListener("focusin", (event) => {
@@ -1237,6 +1247,7 @@ document.querySelectorAll("[data-action]").forEach((button) => button.addEventLi
   else if (action === "paste") {
     try {
       const text = await navigator.clipboard.readText();
+      if (text.includes("\n") && !$("blocks-view").hidden) switchToCode();
       if (text) insertAtCursor(text);
       else showToast("クリップボードにテキストがありません。");
     } catch {
