@@ -110,7 +110,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .info-button { width: 32px; height: 44px; margin: 0 -6px; padding: 0; border: 0; background: none; cursor: help; }
 .info-button::before { content: "i"; display: inline-grid; place-items: center; width: 17px; height: 17px; border: 1.5px solid #b8afb2; border-radius: 50%; color: #a39a9d; font: italic 700 11px/1 Georgia, serif; }
 .info-button:hover::before, .info-tip.open .info-button::before { border-color: var(--muted); color: var(--muted); }
-.info-bubble { display: block; position: absolute; z-index: 15; top: calc(100% + 2px); left: -12px; width: min(320px, calc(100vw - 40px)); padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; background: white; box-shadow: 0 8px 22px #351c2526; color: var(--ink); font-size: .84rem; font-weight: 400; line-height: 1.65; text-align: left; white-space: normal; }
+.info-bubble { display: none; position: absolute; z-index: 15; top: calc(100% + 2px); left: -12px; width: min(320px, calc(100vw - 40px)); padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; background: white; box-shadow: 0 8px 22px #351c2526; color: var(--ink); font-size: .84rem; font-weight: 400; line-height: 1.65; text-align: left; white-space: normal; }
+.info-tip.open .info-bubble { display: block; }
 .editor-options select { min-height: 44px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: white; }
 .mode-button { min-height: 44px; padding: 5px 10px; border-color: var(--line); }
 .mode-button.active { color: var(--wine); background: var(--wine-soft); border-color: #dabac2; font-weight: 700; }

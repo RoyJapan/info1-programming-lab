@@ -1076,7 +1076,8 @@ async function openProgramFile(file) {
     const parsed = JSON.parse(await file.text());
     const data = validateImport(parsed);
     if (!data) { showToast("このファイル形式には対応していません。現在の内容は変更していません。"); return; }
-    if (replaceDocument(data, "ファイルを開く")) showToast("ファイルを開きました。");
+    // ブロックにできないコードは、コード表示のまま理由のトーストを残す。
+    if (replaceDocument(data, "ファイルを開く") && !$("blocks-view").hidden) showToast("ファイルを開きました。");
   } catch {
     showToast("JSONを読み取れません。現在の内容は変更していません。");
   } finally {

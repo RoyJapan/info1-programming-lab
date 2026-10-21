@@ -12,7 +12,7 @@ const APP_FILES = [
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES)));
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_FILES.map((url) => new Request(url, { cache: "reload" })))));
   self.skipWaiting();
 });
 
@@ -27,7 +27,7 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
     // GitHub Pages は10分キャッシュさせるため、毎回サーバーに更新を確認する（変更がなければ304で軽い）。
-    fetch(event.request.url, { cache: "no-cache" }).then((response) => {
+    fetch(event.request, { cache: "no-cache" }).then((response) => {
       // respondWith に渡した後では本文を読めないため、先に複製しておく。
       if (response.ok) {
         const copy = response.clone();

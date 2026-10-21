@@ -196,5 +196,6 @@ test("index.html・app.js・sw.js の ?v= がそろっている", () => {
   const versions = (text) => [...text.matchAll(/\.(?:css|js)\?v=(\w+)/gu)].map((match) => match[1]);
   const found = [read("index.html"), read("app.js"), read("sw.js")].map(versions);
   assert.deepEqual(found.map((list) => list.length), [2, 2, 4]);
-  assert.equal(new Set(found.flat()).size, 1, JSON.stringify(found));
+  const cacheVersion = read("sw.js").match(/CACHE_NAME = "info1-programming-lab-v(\w+)"/u)[1];
+  assert.equal(new Set([...found.flat(), cacheVersion]).size, 1, JSON.stringify({ found, cacheVersion }));
 });
