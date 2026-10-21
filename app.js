@@ -1,6 +1,26 @@
 import { ProgramError, expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram, runtimeLimits } from "./runtime.js?v=7";
 import { lessons } from "./lessons.js?v=7";
 
+// 公開直後は、CDNやブラウザーに残った古いHTMLが、同じURLで配られる新しいJSを読み込むことがある。
+// HTMLの読み込んだ版とこのJSの版が違えば、ここで止めてHTMLを読み直す（CDNが新しくなるまで5秒おき、最大12回）。
+const APP_VERSION = "7";
+const pageVersion = new URL(document.querySelector('script[src*="app.js"]').src).searchParams.get("v");
+if (pageVersion !== APP_VERSION) {
+  const key = "info1-programming-lab-reload-" + APP_VERSION;
+  let tries;
+  try {
+    tries = Number(sessionStorage.getItem(key)) || 0;
+    sessionStorage.setItem(key, String(tries + 1));
+  } catch {
+    tries = 12;
+  }
+  const toast = document.getElementById("toast");
+  toast.textContent = tries < 12 ? "新しい版を読み込んでいます…" : "新しい版を読み込めませんでした。少し待ってから再読み込みしてください。";
+  toast.classList.add("show");
+  if (tries < 12) setTimeout(() => location.reload(), tries ? 5000 : 0);
+  throw new Error("HTMLの版 " + pageVersion + " とJSの版 " + APP_VERSION + " が違います。");
+}
+
 const STORAGE_KEY = "info1-programming-lab-v1";
 const $ = (id) => document.getElementById(id);
 const code = $("code");

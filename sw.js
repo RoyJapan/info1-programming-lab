@@ -1,4 +1,4 @@
-// 公開のたびに CACHE_NAME と ?v= を上げる。?v= は index.html と app.js の import とそろえる（テストで確認）。
+// 公開のたびに CACHE_NAME と ?v= と app.js の APP_VERSION を上げてそろえる（テストで確認）。
 const CACHE_NAME = "info1-programming-lab-v7";
 const APP_FILES = [
   "./",
