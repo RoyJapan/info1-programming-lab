@@ -73,10 +73,10 @@ test("既定の配列添字は0始まり", () => {
   assert.equal(run("Data = [3, 1, 4]\ngoukei = 0\ni を 0 から 要素数(Data) - 1 まで 1 ずつ増やしながら繰り返す:\n  goukei = goukei + Data[i]\n表示する(goukei)"), "8\n");
 });
 
-test("教材は問題文で指定された配列添字を使う", () => {
+test("教材は過去問2本のみで、問題文で指定された配列添字を使う", () => {
+  assert.deepEqual(lessons.map((lesson) => lesson.id), ["past-r7-task-assignment", "past-r8-wait-time"]);
   assert.equal(lessons.find((lesson) => lesson.id === "past-r7-task-assignment").arrayBase, 1);
   assert.equal(lessons.find((lesson) => lesson.id === "past-r8-wait-time").arrayBase, 1);
-  assert.equal(lessons.find((lesson) => lesson.id === "forecast-2027-count-days").arrayBase ?? 0, 0);
 });
 
 test("教材はすべて期待出力どおりで、往復してもコードが変わらない", () => {
@@ -84,6 +84,28 @@ test("教材はすべて期待出力どおりで、往復してもコードが�
     assert.equal(run(lesson.code, { arrayBase: lesson.arrayBase ?? 0, inputValues: lesson.input }).trimEnd(), lesson.expected, lesson.id);
     assert.equal(roundTrip(lesson.code), lesson.code, lesson.id);
   }
+});
+
+// 大学入試センターの原問（R7 第3問 問3 図5 / R8 第3問 問2 図2）と照合。
+test("過去問は原文の配列名・変数名とデータを保持する", () => {
+  const assignment = lessons.find((lesson) => lesson.id === "past-r7-task-assignment");
+  const waiting = lessons.find((lesson) => lesson.id === "past-r8-wait-time");
+  const r7 = runProgram(assignment.code, { arrayBase: assignment.arrayBase });
+  const r8 = runProgram(waiting.code, { arrayBase: waiting.arrayBase });
+  assert.equal(r7.error, null);
+  assert.equal(r8.error, null);
+  assert.deepEqual(Object.keys(r7.variables).sort(), ["Nissu", "Akibi", "kougeihinsu", "buinsu", "kougeihin", "tantou", "buin"].sort());
+  assert.deepEqual(r7.variables.Nissu, [4, 1, 3, 1, 3, 4, 2, 4, 3]);
+  assert.deepEqual(r7.variables.Akibi, [10, 10, 8]);
+  assert.equal(r7.variables.kougeihinsu, 9);
+  assert.equal(r7.variables.buinsu, 3);
+  assert.deepEqual(Object.keys(r8.variables).sort(), ["taiken", "Touchaku", "kyakusu", "Kaishi", "Shuryou", "i"].sort());
+  assert.deepEqual(r8.variables.Touchaku, [0, 3, 4, 10, 11, 12]);
+  assert.deepEqual(r8.variables.Kaishi, [0, 3, 6, 10, 13, 16]);
+  assert.deepEqual(r8.variables.Shuryou, [3, 6, 9, 13, 16, 19]);
+  assert.equal(r8.variables.taiken, 3);
+  assert.equal(r8.variables.kyakusu, 6);
+  for (const lesson of [assignment, waiting]) assert.match(lesson.year, /空欄補完済み/u);
 });
 
 test("1始まりは配列の設定で選べる", () => {

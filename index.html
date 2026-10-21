@@ -8,8 +8,8 @@
   <title>情報Ⅰ プログラミング演習室</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=7">
-  <script type="module" src="./app.js?v=7"></script>
+  <link rel="stylesheet" href="./styles.css?v=8">
+  <script type="module" src="./app.js?v=8"></script>
 </head>
 <body>
   <header class="app-header">
@@ -151,13 +151,8 @@
 
   <dialog id="lesson-dialog" class="modal lesson-modal" aria-labelledby="lesson-heading">
     <div class="modal-heading"><div><p class="eyebrow">学習教材</p><h2 id="lesson-heading">教材からプログラムを選ぶ</h2></div><button class="close-button" type="button" data-close="lesson-dialog" aria-label="閉じる">×</button></div>
-    <div class="lesson-filters" role="tablist" aria-label="教材の種類">
-      <button class="tab active" data-lesson-filter="all" type="button">すべて</button>
-      <button class="tab" data-lesson-filter="past" type="button">過去問題材</button>
-      <button class="tab" data-lesson-filter="forecast" type="button">2027予想</button>
-    </div>
     <div id="lesson-list" class="lesson-list"></div>
-    <p class="copyright-note">過去問の文章・図・コードを転載せず、出題の考え方を参考にした独自教材です。予想問題は出題を保証しません。</p>
+    <p class="copyright-note">過去問コードは大学入試センターの公式問題に基づき、原文の配列名・変数名・データ・処理を保持して空欄を補っています。説明文は本サイトで作成しています。</p>
   </dialog>
 
   <dialog id="help-dialog" class="modal help-modal" aria-labelledby="help-heading">

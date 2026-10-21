@@ -1,12 +1,12 @@
 // 公開のたびに CACHE_NAME と ?v= と app.js の APP_VERSION を上げてそろえる（テストで確認）。
-const CACHE_NAME = "info1-programming-lab-v7";
+const CACHE_NAME = "info1-programming-lab-v8";
 const APP_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=7",
-  "./app.js?v=7",
-  "./runtime.js?v=7",
-  "./lessons.js?v=7",
+  "./styles.css?v=8",
+  "./app.js?v=8",
+  "./runtime.js?v=8",
+  "./lessons.js?v=8",
   "./manifest.webmanifest",
   "./icon.svg"
 ];

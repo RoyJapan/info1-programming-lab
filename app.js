@@ -1,9 +1,9 @@
-import { ProgramError, expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram, runtimeLimits } from "./runtime.js?v=7";
-import { lessons } from "./lessons.js?v=7";
+import { ProgramError, expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram, runtimeLimits } from "./runtime.js?v=8";
+import { lessons } from "./lessons.js?v=8";
 
 // 公開直後は、CDNやブラウザーに残った古いHTMLが、同じURLで配られる新しいJSを読み込むことがある。
 // HTMLの読み込んだ版とこのJSの版が違えば、ここで止めてHTMLを読み直す（CDNが新しくなるまで5秒おき、最大12回）。
-const APP_VERSION = "7";
+const APP_VERSION = "8";
 const pageVersion = new URL(document.querySelector('script[src*="app.js"]').src).searchParams.get("v");
 if (pageVersion !== APP_VERSION) {
   const key = "info1-programming-lab-reload-" + APP_VERSION;
@@ -1016,10 +1016,10 @@ function switchToCode() {
   code.focus();
 }
 
-function renderLessonList(filter = "all") {
+function renderLessonList() {
   const list = $("lesson-list");
   list.replaceChildren();
-  lessons.filter((lesson) => filter === "all" || lesson.kind === filter).forEach((lesson) => {
+  lessons.forEach((lesson) => {
     const card = el("article", { className: "lesson-card" });
     card.append(el("h3", {}, lesson.title));
     const meta = el("div", { className: "lesson-meta" });
@@ -1347,10 +1347,6 @@ $("clear-records").addEventListener("click", () => {
 });
 $("help-button").addEventListener("click", () => openDialog("help-dialog"));
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => $(button.dataset.close).close()));
-document.querySelectorAll("[data-lesson-filter]").forEach((button) => button.addEventListener("click", () => {
-  document.querySelectorAll("[data-lesson-filter]").forEach((tab) => tab.classList.toggle("active", tab === button));
-  renderLessonList(button.dataset.lessonFilter);
-}));
 $("trace-play").addEventListener("click", runTrace);
 $("trace-pause").addEventListener("click", () => {
   clearInterval(state.playTimer);

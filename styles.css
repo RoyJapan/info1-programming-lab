@@ -242,7 +242,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .modal-heading h2 { margin: 0; font-size: 1.2rem; }
 .eyebrow { margin: 0 0 4px; color: var(--wine); font-size: .75rem; font-weight: 800; letter-spacing: .08em; }
 .close-button { min-width: 42px; min-height: 42px; border: 1px solid var(--line); border-radius: 50%; background: white; font-size: 1.6rem; line-height: 1; cursor: pointer; }
-.lesson-filters { padding: 8px 16px 0; }
 .lesson-list { display: grid; gap: 10px; max-height: 58dvh; overflow: auto; padding: 14px 16px; }
 .lesson-card { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .lesson-card h3 { margin: 0 0 5px; font-size: 1rem; }
