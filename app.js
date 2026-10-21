@@ -487,10 +487,10 @@ const STATEMENT_ITEMS = [
   { type: "assign", kind: "assign", text: "x = 0" },
   { type: "fill", kind: "fill", text: "A のすべての値を 0 にする" },
   { type: "print", kind: "print", text: "表示する( )" },
-  { type: "if", kind: "if", text: "○ ならば" },
-  { type: "ifelse", kind: "if", text: "○ ならば ／ そうでなければ" },
+  { type: "if", kind: "if", text: "A ならば" },
+  { type: "ifelse", kind: "if", text: "A ならば ／ そうでなければ" },
   { type: "for", kind: "for", text: "i を 0 から 2 まで 1 ずつ増やしながら" },
-  { type: "while", kind: "while", text: "○ の間繰り返す" },
+  { type: "while", kind: "while", text: "A の間繰り返す" },
   { type: "comment", kind: "comment", text: "# メモ" },
 ];
 // 演算子は情報Ⅰ（共通テスト）の表記のまま表示し、意味と例を説明として添える。
