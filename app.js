@@ -443,7 +443,7 @@ function renderPalette() {
     { label: "A = []", value: "A = []" },
     { label: "A[0]", value: "A[0]" },
   ]);
-  appendPaletteGroup(content, "演算子", OPERATORS.map((item) => ({ label: item.op + " " + item.short, value: " " + item.op + " " })));
+  appendPaletteGroup(content, "演算子", OPERATORS.map((item) => ({ label: operatorLabel(item) + " " + item.short, value: " " + item.op + " " })));
   appendPaletteGroup(content, "関数・表示", [
     { label: "表示する()", value: "表示する()" },
     { label: "要素数()", value: "要素数()" },
@@ -502,15 +502,15 @@ const OPERATORS = [
   { op: "÷", short: "商（整数）", help: "わり算の商の整数部分。7 ÷ 2 → 3（算数の ÷ とは違い、小数にならない）", group: "calc" },
   { op: "%", short: "余り", help: "わり算の余り。7 % 2 → 1", group: "calc" },
   { op: "**", short: "べき乗", help: "べき乗。2 ** 3 → 8（2の3乗）", group: "calc" },
-  { op: "==", short: "等しい", help: "左右が等しいとき真（算数の ＝）。3 == 3 → true", group: "logic" },
-  { op: "!=", short: "等しくない", help: "左右が等しくないとき真（≠）。3 != 2 → true", group: "logic" },
-  { op: "<", short: "より小さい", help: "左が右より小さいとき真。2 < 3 → true", group: "logic" },
-  { op: "<=", short: "以下", help: "左が右以下のとき真（≦）。3 <= 3 → true", group: "logic" },
-  { op: ">", short: "より大きい", help: "左が右より大きいとき真。3 > 2 → true", group: "logic" },
-  { op: ">=", short: "以上", help: "左が右以上のとき真（≧）。3 >= 3 → true", group: "logic" },
-  { op: "and", short: "かつ", help: "両方とも真のとき真。x > 0 and x < 10", group: "logic" },
-  { op: "or", short: "または", help: "どちらかが真のとき真。x < 0 or x > 10", group: "logic" },
-  { op: "not", short: "ではない", help: "真と偽を反対にする。not x == 0 は「x が 0 ではない」", group: "logic" },
+  { op: "==", short: "AはBと等しい", help: "A == B は、AがBと等しいとき真（算数の ＝）。3 == 3 → true", group: "logic" },
+  { op: "!=", short: "AはBと等しくない", help: "A != B は、AがBと等しくないとき真（≠）。3 != 2 → true", group: "logic" },
+  { op: "<", short: "AはBより小さい", help: "A < B は、AがBより小さいとき真。2 < 3 → true", group: "logic" },
+  { op: "<=", short: "AはB以下", help: "A <= B は、AがB以下のとき真（≦）。3 <= 3 → true", group: "logic" },
+  { op: ">", short: "AはBより大きい", help: "A > B は、AがBより大きいとき真。3 > 2 → true", group: "logic" },
+  { op: ">=", short: "AはB以上", help: "A >= B は、AがB以上のとき真（≧）。3 >= 3 → true", group: "logic" },
+  { op: "and", short: "AかつB", help: "A and B は、AとBの両方が真のとき真。x > 0 and x < 10", group: "logic" },
+  { op: "or", short: "AまたはB", help: "A or B は、AかBのどちらかが真のとき真。x < 0 or x > 10", group: "logic" },
+  { op: "not", short: "Aではない", help: "not A は、Aの真と偽を反対にする。not x == 0 は「x が 0 ではない」", group: "logic" },
 ];
 const OPERATOR_INFO = Object.fromEntries(OPERATORS.map((item) => [item.op, item]));
 const FUNCTION_ITEMS = [
