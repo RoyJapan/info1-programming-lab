@@ -523,7 +523,7 @@ const exprSlots = new WeakMap(); // 式の入力欄・演算ブロック → { g
 let blockDrag = null;
 
 function operatorLabel(item) {
-  return item.op === "not" ? "not ○" : "○ " + item.op + " ○";
+  return item.op === "not" ? "not A" : "A " + item.op + " B";
 }
 
 // 演算子の記号。マウスを重ねると説明が出る（タップ時は下の案内欄に出す）。
@@ -806,7 +806,7 @@ function renderBlockTree() {
 function renderBlockPalette(tab) {
   let items;
   if (tab === "statements") items = STATEMENT_ITEMS.map((item) => ({ spec: { type: item.type }, kind: item.kind, label: BLOCK_LABELS[item.kind], text: item.text }));
-  else if (tab === "functions") items = FUNCTION_ITEMS.map((item) => ({ spec: item, text: item.text ?? item.name + "(" + (item.arity === 2 ? "○, ○" : item.arity ? "○" : "") + ")" }));
+  else if (tab === "functions") items = FUNCTION_ITEMS.map((item) => ({ spec: item, text: item.text ?? item.name + "(" + (item.arity === 2 ? "A, B" : item.arity ? "A" : "") + ")" }));
   else items = OPERATORS.filter((item) => item.group === tab).map((item) => ({ spec: item, text: operatorLabel(item), note: item.short, help: item.op + " … " + item.help }));
   const box = el("div", { className: "block-palette-items" });
   box.append(...items.map(({ spec, kind, label, text, note, help }) => {
