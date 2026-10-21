@@ -275,7 +275,27 @@ function clearTrace() {
   $("trace-pause").disabled = true;
   $("trace-next").disabled = true;
   updateLineNumbers();
+  markTraceBlock();
   renderTraceTable();
+}
+
+// トレースで実行中の行を、ブロック表示のカードにも映す。
+// カードは文の順（もしの中→そうでなければの中）に並ぶので、実行するコードを読み直した文と同じ順で行番号を対応させる。
+// 1行に並んだ代入はどのカードも同じ行なので、まとめて強調する。
+function markTraceBlock(scroll = false) {
+  const line = state.trace[state.traceIndex]?.line ?? -1;
+  const cards = [...$("block-tree").querySelectorAll(".block-card")];
+  const lines = [];
+  const walk = (nodes) => nodes.forEach((node) => { lines.push(node.line); walk(node.then ?? node.body ?? []); walk(node.otherwise ?? []); });
+  if (line > 0) try { walk(parseProgram(code.value)); } catch { lines.length = 0; }
+  const ok = lines.length === cards.length;
+  cards.forEach((card, index) => card.classList.toggle("current", ok && lines[index] === line));
+  const main = cards.find((card) => card.classList.contains("current"))?.firstElementChild;
+  if (!scroll || !main) return;
+  // 画面全体は動かさず、ブロックの置き場の中だけをスクロールする。
+  const stage = $("block-stage");
+  const top = main.getBoundingClientRect().top - stage.getBoundingClientRect().top;
+  if (top < 0 || top + main.offsetHeight > stage.clientHeight) stage.scrollTop += top - 12;
 }
 
 function formatVariable(value) {
@@ -323,6 +343,7 @@ function renderTraceStep(index, updateOutput = true) {
   state.traceIndex = Math.max(0, Math.min(index, state.trace.length - 1));
   const row = state.trace[state.traceIndex];
   updateLineNumbers(row.line);
+  markTraceBlock(true);
   $("trace-position").textContent = (state.traceIndex + 1) + " / " + state.trace.length + " 件 ・ " + row.line + "行目";
   $("trace-next").disabled = state.traceIndex >= state.trace.length - 1;
   $("trace-play").disabled = state.traceIndex >= state.trace.length - 1;
@@ -512,6 +533,7 @@ function commitBlockTree(rerender = false) {
     return true;
   } catch (error) {
     state.blocksValid = false;
+    clearTrace();
     const blank = [...$("block-tree").querySelectorAll(".rb-leaf")].some((field) => !field.value.trim());
     $("blocks-message").textContent = blank ? "「?」の空欄に値を入れてください。" : "入力中の式を確認してください。 " + error.line + "行目: " + error.message;
     $("blocks-message").className = "blocks-message error-message";
@@ -757,6 +779,7 @@ function renderBlockTree() {
   blockStacks.set(tree, state.blockAst);
   tree.classList.toggle("selected", state.blockSelection === state.blockAst);
   state.blockAst.forEach((node, index) => tree.append(renderBlockCard(node, state.blockAst, index)));
+  markTraceBlock();
 }
 
 function renderBlockPalette(tab = "statements") {
