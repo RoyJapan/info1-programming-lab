@@ -268,6 +268,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .side-column { grid-template-rows: minmax(300px, auto) minmax(220px, auto); }
   .results-panel { order: -1; }
   .assist-panel { order: 1; }
+  /* ブロック表示では、置き場（編集補助）をプログラムの直下に出す */
+  .workspace.blocks-mode .assist-panel { order: -2; }
 }
 
 @media (max-width: 620px) {

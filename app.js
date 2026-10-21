@@ -414,6 +414,7 @@ function renderLessonContext() {
 function updateModeActions() {
   const blockMode = !$("blocks-view").hidden;
   $("line-actions").hidden = blockMode;
+  document.querySelector(".workspace").classList.toggle("blocks-mode", blockMode);
   // ブロック表示ではブロックの置き場（命令・計算・条件・関数・入力）、コード表示では構文の挿入を出す。
   $("tab-block-palette").hidden = blockMode;
   document.querySelectorAll(".block-tab").forEach((tab) => { tab.hidden = !blockMode; });
