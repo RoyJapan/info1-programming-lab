@@ -963,7 +963,7 @@ function switchToBlocks() {
     updateModeActions();
     renderBlockTree();
   } catch (error) {
-    showToast(error.line + "行目: " + error.message + " コードは変更していません。");
+    showToast(error.line + "行目: " + error.message + " ブロックにできないため、コード表示のままにします。");
   }
 }
 
