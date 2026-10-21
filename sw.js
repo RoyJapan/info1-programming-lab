@@ -1,11 +1,12 @@
-const CACHE_NAME = "info1-programming-lab-v5";
+// 公開のたびに CACHE_NAME と ?v= を上げる。?v= は index.html と app.js の import とそろえる（テストで確認）。
+const CACHE_NAME = "info1-programming-lab-v6";
 const APP_FILES = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
-  "./runtime.js",
-  "./lessons.js",
+  "./styles.css?v=6",
+  "./app.js?v=6",
+  "./runtime.js?v=6",
+  "./lessons.js?v=6",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
@@ -25,7 +26,8 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
   event.respondWith(
-    fetch(event.request).then((response) => {
+    // GitHub Pages は10分キャッシュさせるため、毎回サーバーに更新を確認する（変更がなければ304で軽い）。
+    fetch(event.request.url, { cache: "no-cache" }).then((response) => {
       // respondWith に渡した後では本文を読めないため、先に複製しておく。
       if (response.ok) {
         const copy = response.clone();

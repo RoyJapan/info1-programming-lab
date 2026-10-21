@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram } from "../runtime.js";
+import { readFileSync } from "node:fs";
 import { lessons } from "../lessons.js";
 
 function run(source, options = {}) {
@@ -187,4 +188,13 @@ test("式をブロックからコードに戻しても意味が変わらない",
 test("ブロックの入力欄は全角や×も読む", () => {
   assert.equal(expressionToSource(parseExpressionText("ｘ＋１×２")), "x + 1 * 2");
   assert.throws(() => parseExpressionText("x # メモ"), /#/u);
+});
+
+// 新しいHTMLと古いJS/CSSが混ざると動かなくなるため、読み込むファイルの ?v= をそろえる。
+test("index.html・app.js・sw.js の ?v= がそろっている", () => {
+  const read = (file) => readFileSync(new URL("../" + file, import.meta.url), "utf8");
+  const versions = (text) => [...text.matchAll(/\.(?:css|js)\?v=(\w+)/gu)].map((match) => match[1]);
+  const found = [read("index.html"), read("app.js"), read("sw.js")].map(versions);
+  assert.deepEqual(found.map((list) => list.length), [2, 2, 4]);
+  assert.equal(new Set(found.flat()).size, 1, JSON.stringify(found));
 });

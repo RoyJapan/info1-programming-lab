@@ -1,5 +1,5 @@
-import { ProgramError, expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram, runtimeLimits } from "./runtime.js";
-import { lessons } from "./lessons.js";
+import { ProgramError, expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram, runtimeLimits } from "./runtime.js?v=6";
+import { lessons } from "./lessons.js?v=6";
 
 const STORAGE_KEY = "info1-programming-lab-v1";
 const $ = (id) => document.getElementById(id);
@@ -1255,12 +1255,17 @@ $("input-values").addEventListener("input", scheduleSave);
 $("prediction").addEventListener("input", scheduleSave);
 $("skip-prediction").addEventListener("change", scheduleSave);
 $("array-base").addEventListener("change", () => { clearTrace(); scheduleSave(); });
-// 添字の説明: タップで開閉し、外側のタップやEscで閉じる
+// 添字の説明: マウスは重ねると開き、タップやクリックで開く。外側のタップやEscで閉じる。
+// hidden 属性で隠すので、CSSが読めないときも説明がむき出しにならない。
 function setIndexInfo(open) {
   $("index-info").closest(".info-tip").classList.toggle("open", open);
   $("index-info").setAttribute("aria-expanded", String(open));
+  $("index-info-text").hidden = !open;
 }
-$("index-info").addEventListener("click", () => setIndexInfo($("index-info").getAttribute("aria-expanded") !== "true"));
+const indexTip = $("index-info").closest(".info-tip");
+indexTip.addEventListener("pointerenter", (event) => { if (event.pointerType === "mouse") setIndexInfo(true); });
+indexTip.addEventListener("pointerleave", (event) => { if (event.pointerType === "mouse") setIndexInfo(false); });
+$("index-info").addEventListener("click", () => setIndexInfo(true));
 document.addEventListener("click", (event) => { if (!event.target.closest(".info-tip")) setIndexInfo(false); });
 document.addEventListener("keydown", (event) => { if (event.key === "Escape") setIndexInfo(false); });
 $("run-button").addEventListener("click", executeProgram);
