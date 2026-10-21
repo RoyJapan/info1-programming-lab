@@ -8,8 +8,8 @@
   <title>情報Ⅰ プログラミング演習室</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=6">
-  <script type="module" src="./app.js?v=6"></script>
+  <link rel="stylesheet" href="./styles.css?v=7">
+  <script type="module" src="./app.js?v=7"></script>
 </head>
 <body>
   <header class="app-header">
@@ -82,10 +82,6 @@
         <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="プログラムのコード" wrap="off"></textarea>
       </div>
       <div id="blocks-view" class="blocks-view" hidden>
-        <div id="block-palette" class="block-palette" aria-label="ブロック置き場">
-          <div id="block-palette-tabs" class="block-palette-tabs"></div>
-          <div id="block-palette-items" class="block-palette-items"></div>
-        </div>
         <p id="blocks-message" class="muted blocks-message">コードをブロックに変換します。</p>
         <div id="block-stage" class="block-stage">
           <div id="block-tree" class="block-tree" aria-label="プログラムブロック"></div>
@@ -98,8 +94,12 @@
     </section>
 
     <aside class="side-column">
-      <section class="assist-panel panel" aria-label="編集補助">
+      <section id="assist-panel" class="assist-panel panel" aria-label="編集補助">
         <div class="tabs" role="tablist" aria-label="編集補助">
+          <button class="tab block-tab" id="tab-statements" role="tab" aria-selected="false" aria-controls="assist-content" data-assist="statements" type="button" hidden>命令</button>
+          <button class="tab block-tab" id="tab-calc" role="tab" aria-selected="false" aria-controls="assist-content" data-assist="calc" type="button" hidden>計算</button>
+          <button class="tab block-tab" id="tab-logic" role="tab" aria-selected="false" aria-controls="assist-content" data-assist="logic" type="button" hidden>条件</button>
+          <button class="tab block-tab" id="tab-functions" role="tab" aria-selected="false" aria-controls="assist-content" data-assist="functions" type="button" hidden>関数・入力</button>
           <button class="tab active" id="tab-block-palette" role="tab" aria-selected="true" aria-controls="assist-content" data-assist="palette" type="button">構文を挿入</button>
           <button class="tab" id="tab-input-help" role="tab" aria-selected="false" aria-controls="assist-content" data-assist="help" type="button">入力補助</button>
         </div>
@@ -163,8 +163,8 @@
   <dialog id="help-dialog" class="modal help-modal" aria-labelledby="help-heading">
     <div class="modal-heading"><div><p class="eyebrow">情報Ⅰ プログラミング演習室</p><h2 id="help-heading">使い方</h2></div><button class="close-button" type="button" data-close="help-dialog" aria-label="閉じる">×</button></div>
     <div class="help-body">
-      <h3>ブロックで組み立てる</h3><p>プログラムはブロック表示で開きます。上の置き場からブロックをドラッグして積み、「ならば」「繰返しの中」の枠へ入れると入れ子になります。置いたブロックは左の ⠿ をドラッグして移動でき、置き場へ戻すと削除します。ドラッグしにくいときは、ブロックや枠をタップして位置を選び、置き場のブロックをタップすると追加できます。↑ ↓ × でも移動・削除できます。</p>
-      <h3>式（計算と条件）</h3><p>式の白い枠をタップしてから「計算」「条件」「関数・入力」の置き場をタップすると、その値を包む演算ブロックになります（枠へドラッグしても同じ）。演算子は情報Ⅰ（共通テスト）の表記で表示します。置き場には意味を添え、ブロックの演算子にマウスを重ねるかタップすると説明が出ます。* はかけ算（×）、/ はわり算（7 / 2 → 3.5）、÷ は商の整数部分（7 ÷ 2 → 3）、% は余り、** はべき乗、== は等しい、!= は等しくない、and は「かつ」、or は「または」、not は「ではない」です。演算ブロックをタップすると右端に出る × で演算を外せます。</p>
+      <h3>ブロックで組み立てる</h3><p>プログラムはブロック表示で開きます。編集補助の「命令」タブの置き場からブロックをドラッグして積み、「ならば」「繰返しの中」の枠へ入れると入れ子になります。置いたブロックは左の ⠿ をドラッグして移動でき、置き場へ戻すと削除します。ドラッグしにくいときは、ブロックや枠をタップして位置を選び、「命令」の置き場のブロックをタップすると追加できます。↑ ↓ × でも移動・削除できます。</p>
+      <h3>式（計算と条件）</h3><p>式の白い枠をタップしてから「計算」「条件」「関数・入力」タブの置き場をタップすると、その値を包む演算ブロックになります（枠へドラッグしても同じ）。演算子は情報Ⅰ（共通テスト）の表記で表示します。置き場には意味を添え、ブロックの演算子にマウスを重ねるかタップすると説明が出ます。* はかけ算（×）、/ はわり算（7 / 2 → 3.5）、÷ は商の整数部分（7 ÷ 2 → 3）、% は余り、** はべき乗、== は等しい、!= は等しくない、and は「かつ」、or は「または」、not は「ではない」です。演算ブロックをタップすると右端に出る × で演算を外せます。</p>
       <h3>コードで見る</h3><p>「コード」を押すと、ブロックを共通テストの表記のコードで表示し、直接書き換えることもできます。配列の添字は0からが標準ですが、問題文に指定があればそちらに合わせます。教材を選ぶと、その問題の添字設定も反映します。</p>
       <h3>予想して実行する</h3><p>出力を予想欄に書いてから「実行」を押します。Ctrl+Enterでも実行できます。記録はこの端末だけに保存されます。</p>
       <h3>保存とプライバシー</h3><p>編集内容はブラウザー内に自動保存されます。別の端末へ移すときは「書き出し」を使ってください。コードを外部へ送信しません。</p>

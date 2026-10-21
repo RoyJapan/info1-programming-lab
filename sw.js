@@ -1,12 +1,12 @@
 // 公開のたびに CACHE_NAME と ?v= を上げる。?v= は index.html と app.js の import とそろえる（テストで確認）。
-const CACHE_NAME = "info1-programming-lab-v6";
+const CACHE_NAME = "info1-programming-lab-v7";
 const APP_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=6",
-  "./app.js?v=6",
-  "./runtime.js?v=6",
-  "./lessons.js?v=6",
+  "./styles.css?v=7",
+  "./app.js?v=7",
+  "./runtime.js?v=7",
+  "./lessons.js?v=7",
   "./manifest.webmanifest",
   "./icon.svg"
 ];

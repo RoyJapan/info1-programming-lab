@@ -1,5 +1,5 @@
-import { ProgramError, expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram, runtimeLimits } from "./runtime.js?v=6";
-import { lessons } from "./lessons.js?v=6";
+import { ProgramError, expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram, runtimeLimits } from "./runtime.js?v=7";
+import { lessons } from "./lessons.js?v=7";
 
 const STORAGE_KEY = "info1-programming-lab-v1";
 const $ = (id) => document.getElementById(id);
@@ -379,7 +379,8 @@ function showAssist(name) {
   const selected = document.querySelector('[data-assist="' + name + '"]');
   $("assist-content").setAttribute("aria-labelledby", selected.id);
   if (name === "help") renderInputHelp();
-  else renderPalette();
+  else if (name === "palette") renderPalette();
+  else renderBlockPalette(name);
 }
 
 function renderLessonContext() {
@@ -393,8 +394,10 @@ function renderLessonContext() {
 function updateModeActions() {
   const blockMode = !$("blocks-view").hidden;
   $("line-actions").hidden = blockMode;
+  // ブロック表示ではブロックの置き場（命令・計算・条件・関数・入力）、コード表示では構文の挿入を出す。
   $("tab-block-palette").hidden = blockMode;
-  if (blockMode && $("tab-block-palette").getAttribute("aria-selected") === "true") showAssist("help");
+  document.querySelectorAll(".block-tab").forEach((tab) => { tab.hidden = !blockMode; });
+  if (document.querySelector('[data-assist][aria-selected="true"]').hidden) showAssist(blockMode ? "statements" : "palette");
 }
 
 function appendPaletteGroup(container, title, items) {
@@ -492,12 +495,6 @@ const OPERATOR_INFO = Object.fromEntries(OPERATORS.map((item) => [item.op, item]
 const FUNCTION_ITEMS = [
   { name: "要素数", arity: 1 }, { name: "最大値", arity: 2 }, { name: "最小値", arity: 2 }, { name: "整数", arity: 1 },
   { name: "乱数", arity: 0 }, { name: "入力", arity: 0, text: "【外部からの入力】" },
-];
-const PALETTE_TABS = [
-  { id: "statements", label: "命令" },
-  { id: "calc", label: "計算" },
-  { id: "logic", label: "条件" },
-  { id: "functions", label: "関数・入力" },
 ];
 const blockStacks = new WeakMap(); // .block-tree / .block-children 要素 → その中身の配列
 const blockNodes = new WeakMap(); // .block-card 要素 → { node, nodes }
@@ -701,7 +698,7 @@ function addChildSection(parent, nodes, title) {
   const add = el("button", { className: "block-add-child", type: "button" }, "＋ " + title + " に追加");
   add.addEventListener("click", () => {
     selectBlockTarget(branch);
-    $("blocks-message").textContent = "上の置き場のブロックをタップすると「" + title + "」の最後に追加します。";
+    $("blocks-message").textContent = "「命令」の置き場のブロックをタップすると「" + title + "」の最後に追加します。";
     $("blocks-message").className = "muted blocks-message";
   });
   branch.append(add);
@@ -784,18 +781,14 @@ function renderBlockTree() {
   markTraceBlock();
 }
 
-function renderBlockPalette(tab = "statements") {
-  const tabs = $("block-palette-tabs");
-  tabs.replaceChildren(...PALETTE_TABS.map((item) => {
-    const button = el("button", { type: "button", className: item.id === tab ? "tab active" : "tab", attrs: { "aria-pressed": String(item.id === tab) } }, item.label);
-    button.addEventListener("click", () => renderBlockPalette(item.id));
-    return button;
-  }));
+// 右側の編集補助に、選んだタブのブロックの置き場を出す。
+function renderBlockPalette(tab) {
   let items;
   if (tab === "statements") items = STATEMENT_ITEMS.map((item) => ({ spec: { type: item.type }, kind: item.kind, label: BLOCK_LABELS[item.kind], text: item.text }));
   else if (tab === "functions") items = FUNCTION_ITEMS.map((item) => ({ spec: item, text: item.text ?? item.name + "(" + (item.arity === 2 ? "○, ○" : item.arity ? "○" : "") + ")" }));
   else items = OPERATORS.filter((item) => item.group === tab).map((item) => ({ spec: item, text: operatorLabel(item), note: item.short, help: item.op + " … " + item.help }));
-  $("block-palette-items").replaceChildren(...items.map(({ spec, kind, label, text, note, help }) => {
+  const box = el("div", { className: "block-palette-items" });
+  box.append(...items.map(({ spec, kind, label, text, note, help }) => {
     const button = el("button", { type: "button", className: kind ? "palette-block" : "palette-block palette-reporter", dataset: kind ? { kind } : {} });
     if (help) button.title = help;
     if (label) button.append(el("b", {}, label));
@@ -809,6 +802,10 @@ function renderBlockPalette(tab = "statements") {
     });
     return button;
   }));
+  const guide = tab === "statements"
+    ? "左のプログラムへドラッグして積みます。タップすると選んだ位置に追加します。置いたブロックをここへ戻すと削除します。"
+    : "式の白い枠をタップしてから押すと、その値を包みます。枠へドラッグしても同じです。";
+  $("assist-content").replaceChildren(el("p", { className: "assist-note" }, guide), box);
 }
 
 // タップで選んだブロックの後ろ、または選んだ「中」の末尾。未選択ならプログラムの末尾。
@@ -860,7 +857,7 @@ function beginBlockDrag(event, source) {
 function blockDropTarget(x, y) {
   const hit = document.elementFromPoint(x, y);
   if (!hit) return null;
-  if (hit.closest("#block-palette")) return { remove: true };
+  if (hit.closest("#assist-panel")) return { remove: true };
   if (!hit.closest("#block-stage")) return null;
   if (blockDrag.spec && !blockDrag.spec.type) {
     const slot = hit.closest(".rb-leaf, .rb");
@@ -880,7 +877,7 @@ function blockDropTarget(x, y) {
 
 function showDropMarker(target) {
   const marker = $("block-drop-marker");
-  $("block-palette").classList.toggle("trash", Boolean(target?.remove && blockDrag?.node));
+  $("assist-panel").classList.toggle("trash", Boolean(target?.remove && blockDrag?.node));
   $("block-stage").querySelectorAll(".drop-target").forEach((item) => item.classList.remove("drop-target"));
   if (target?.slot) target.slot.classList.add("drop-target");
   if (!target?.stack) { marker.hidden = true; return; }
@@ -1223,7 +1220,6 @@ function renderInitialState() {
   renderRecords();
   renderLessonList();
   renderPalette();
-  renderBlockPalette();
   updateRunButtonState();
   switchToBlocks();
 }
@@ -1288,8 +1284,7 @@ $("block-stage").addEventListener("focusin", (event) => {
 window.addEventListener("pointermove", moveBlockDrag, { passive: false });
 window.addEventListener("pointerup", endBlockDrag);
 window.addEventListener("pointercancel", endBlockDrag);
-$("tab-block-palette").addEventListener("click", () => showAssist("palette"));
-$("tab-input-help").addEventListener("click", () => showAssist("help"));
+document.querySelectorAll("[data-assist]").forEach((tab) => tab.addEventListener("click", () => showAssist(tab.dataset.assist)));
 document.querySelectorAll("[data-result]").forEach((tab) => tab.addEventListener("click", () => switchResult(tab.dataset.result)));
 document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", async () => {
   button.closest("details")?.removeAttribute("open");
