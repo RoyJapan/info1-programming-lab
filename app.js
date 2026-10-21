@@ -1,9 +1,9 @@
-import { ProgramError, expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram, runtimeLimits } from "./runtime.js?v=8";
-import { lessons } from "./lessons.js?v=8";
+import { ProgramError, expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram, runtimeLimits } from "./runtime.js?v=9";
+import { lessons } from "./lessons.js?v=9";
 
 // 公開直後は、CDNやブラウザーに残った古いHTMLが、同じURLで配られる新しいJSを読み込むことがある。
 // HTMLの読み込んだ版とこのJSの版が違えば、ここで止めてHTMLを読み直す（CDNが新しくなるまで5秒おき、最大12回）。
-const APP_VERSION = "8";
+const APP_VERSION = "9";
 const pageVersion = new URL(document.querySelector('script[src*="app.js"]').src).searchParams.get("v");
 if (pageVersion !== APP_VERSION) {
   const key = "info1-programming-lab-reload-" + APP_VERSION;
@@ -69,6 +69,36 @@ const previousDefaultCode = [
   "  合計 = 合計 + A[i]",
   "表示する(\"合計：\", 合計)",
 ].join("\n");
+
+function setupFontSize() {
+  const field = $("program-font-size");
+  const style = document.documentElement.style;
+  const key = "info1-programming-lab-font-size";
+  const apply = () => {
+    if (!field.checkValidity()) return false;
+    style.setProperty("--code-size", field.valueAsNumber + "px");
+    $("line-numbers").scrollTop = code.scrollTop;
+    return true;
+  };
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved !== null) field.value = saved;
+  } catch {}
+  if (!apply()) {
+    field.value = field.defaultValue;
+    apply();
+  }
+  field.addEventListener("input", () => {
+    if (!apply()) return;
+    try { localStorage.setItem(key, field.value); }
+    catch { showToast("文字サイズを保存できません。再読み込みすると元に戻ります。"); }
+  });
+  field.addEventListener("blur", () => {
+    if (field.checkValidity()) return;
+    field.value = String(parseFloat(style.getPropertyValue("--code-size")));
+    showToast("文字サイズは16〜32pxの整数で指定してください。");
+  });
+}
 
 function readSavedState() {
   try {
@@ -1356,6 +1386,7 @@ $("trace-pause").addEventListener("click", () => {
 });
 $("trace-next").addEventListener("click", () => renderTraceStep(state.traceIndex + 1));
 
+setupFontSize();
 renderInitialState();
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});

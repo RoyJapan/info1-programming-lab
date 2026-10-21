@@ -8,8 +8,8 @@
   <title>情報Ⅰ プログラミング演習室</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=8">
-  <script type="module" src="./app.js?v=8"></script>
+  <link rel="stylesheet" href="./styles.css?v=9">
+  <script type="module" src="./app.js?v=9"></script>
 </head>
 <body>
   <header class="app-header">
@@ -53,9 +53,10 @@
   <main class="workspace">
     <section class="editor-panel panel" aria-labelledby="editor-heading">
       <div class="panel-heading editor-heading">
-        <div>
+        <div class="editor-title">
           <h1 id="editor-heading">プログラム</h1>
           <span id="line-count" class="muted">1行</span>
+          <label class="font-size-setting" for="program-font-size">文字サイズ <input id="program-font-size" type="number" min="16" max="32" step="1" value="17" inputmode="numeric" required aria-label="プログラムの文字サイズ（px）"> px</label>
         </div>
         <div class="editor-options">
           <label class="setting-label" for="array-base">配列の添字</label>
