@@ -32,10 +32,10 @@
         <button data-action="export" type="button">⇩ 書き出し</button>
       </div>
     </details>
-    <div id="text-edit-actions" class="toolbar-actions">
+    <div class="toolbar-actions">
       <button data-action="undo" type="button" aria-label="元に戻す">↶ 元に戻す</button>
       <button data-action="redo" type="button" aria-label="やり直し">↷ やり直し</button>
-      <details class="toolbar-menu">
+      <details id="line-actions" class="toolbar-menu">
         <summary>行操作 ▾</summary>
         <div class="toolbar-menu-items">
           <button data-action="duplicate" type="button">▢ 複製</button>
@@ -59,12 +59,16 @@
         </div>
         <div class="editor-options">
           <label class="setting-label" for="array-base">配列の添字</label>
+          <span class="info-tip">
+            <button id="index-info" class="info-button" type="button" aria-label="添字の説明" aria-expanded="false" aria-controls="index-info-text"></button>
+            <span id="index-info-text" class="info-bubble" role="tooltip">添字とはプログラミング界隈の中で主にindexと呼びます。多くのプログラミング言語や<strong>情報Ⅰのプログラミング</strong>では0を最初のデータとして扱います。<br>囚人番号みたいなもので[1,2,3]と番号を割り当てるのが現実の世界ですが、<br>プログラムの世界では[0,1,2]と0を先頭として考えます。</span>
+          </span>
           <select id="array-base" aria-label="配列の添字の開始値">
             <option value="0" selected>0から（標準）</option>
             <option value="1">1から</option>
           </select>
-          <button id="code-mode" class="mode-button active" type="button" aria-pressed="true">コード</button>
           <button id="blocks-mode" class="mode-button" type="button" aria-pressed="false">ブロック</button>
+          <button id="code-mode" class="mode-button active" type="button" aria-pressed="true">コード</button>
           <button id="run-button" class="run-button primary-button" type="button"><span aria-hidden="true">▶</span> 実行</button>
         </div>
       </div>
@@ -78,21 +82,14 @@
         <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="プログラムのコード" wrap="off"></textarea>
       </div>
       <div id="blocks-view" class="blocks-view" hidden>
-        <div class="block-add-row">
-          <label for="new-block-type">ブロックを追加</label>
-          <select id="new-block-type">
-            <option value="assign">代入</option>
-            <option value="print">表示</option>
-            <option value="if">もし</option>
-            <option value="for">回数繰返し</option>
-            <option value="while">条件繰返し</option>
-            <option value="fill">すべての値を</option>
-            <option value="comment">コメント</option>
-          </select>
-          <button id="add-block" class="primary-button" type="button">追加</button>
+        <div id="block-palette" class="block-palette" aria-label="ブロック置き場">
+          <div id="block-palette-tabs" class="block-palette-tabs"></div>
+          <div id="block-palette-items" class="block-palette-items"></div>
         </div>
         <p id="blocks-message" class="muted blocks-message">コードをブロックに変換します。</p>
-        <div id="block-tree" class="block-tree" aria-label="プログラムブロック"></div>
+        <div id="block-stage" class="block-stage">
+          <div id="block-tree" class="block-tree" aria-label="プログラムブロック"></div>
+        </div>
       </div>
       <div class="editor-footer">
         <span id="save-status" role="status">この端末に保存されます</span>
@@ -166,14 +163,16 @@
   <dialog id="help-dialog" class="modal help-modal" aria-labelledby="help-heading">
     <div class="modal-heading"><div><p class="eyebrow">情報Ⅰ プログラミング演習室</p><h2 id="help-heading">使い方</h2></div><button class="close-button" type="button" data-close="help-dialog" aria-label="閉じる">×</button></div>
     <div class="help-body">
-      <h3>コードを書く</h3><p>左の欄に共通テスト風のプログラムを書きます。配列の添字は0からが標準ですが、問題文に指定があればそちらに合わせます。教材を選ぶと、その問題の添字設定も反映します。</p>
-      <h3>ブロックで組み立てる</h3><p>「ブロック」へ切り替えると、対応しているプログラムをブロックで編集できます。コード表示へ戻すと同じプログラムが反映されます。</p>
+      <h3>ブロックで組み立てる</h3><p>プログラムはブロック表示で開きます。上の置き場からブロックをドラッグして積み、「ならば」「繰返しの中」の枠へ入れると入れ子になります。置いたブロックは左の ⠿ をドラッグして移動でき、置き場へ戻すと削除します。ドラッグしにくいときは、ブロックや枠をタップして位置を選び、置き場のブロックをタップすると追加できます。↑ ↓ × でも移動・削除できます。</p>
+      <h3>式（計算と条件）</h3><p>式の白い枠をタップしてから「計算」「条件」「関数・入力」の置き場をタップすると、その値を包む演算ブロックになります（枠へドラッグしても同じ）。演算子は情報Ⅰ（共通テスト）の表記で表示します。置き場には意味を添え、ブロックの演算子にマウスを重ねるかタップすると説明が出ます。* はかけ算（×）、/ はわり算（7 / 2 → 3.5）、÷ は商の整数部分（7 ÷ 2 → 3）、% は余り、** はべき乗、== は等しい、!= は等しくない、and は「かつ」、or は「または」、not は「ではない」です。演算ブロックの右端の × で演算を外せます。</p>
+      <h3>コードで見る</h3><p>「コード」を押すと、ブロックを共通テストの表記のコードで表示し、直接書き換えることもできます。配列の添字は0からが標準ですが、問題文に指定があればそちらに合わせます。教材を選ぶと、その問題の添字設定も反映します。</p>
       <h3>予想して実行する</h3><p>出力を予想欄に書いてから「実行」を押します。Ctrl+Enterでも実行できます。記録はこの端末だけに保存されます。</p>
       <h3>保存とプライバシー</h3><p>編集内容はブラウザー内に自動保存されます。別の端末へ移すときは「書き出し」を使ってください。コードを外部へ送信しません。</p>
       <p class="muted">対応範囲：代入（1行に複数可）、一次元・二次元配列（添字は通常0から。問題文の指定を優先）、すべての値を…にする、演算（÷を含む）、もし/そうでなくもし/そうでなければ、増やしながら/減らしながら/の間繰り返す、表示、【外部からの入力】、#コメント、要素数/最大値/最小値/整数/乱数。全角の記号や数字は文字列の外では半角として読みます。共通テスト用表記のすべてを実装するものではありません。乱数()は0以上1未満です。</p>
     </div>
   </dialog>
 
+  <div id="block-drop-marker" class="block-drop-marker" hidden></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

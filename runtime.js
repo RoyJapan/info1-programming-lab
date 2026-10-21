@@ -110,6 +110,7 @@ function parseExpression(source, line) {
     if (take("(")) {
       const value = expression(0);
       expect(")");
+      value.paren = true; // 書いた括弧は、式をコードに戻すときも残す
       return postfix(value);
     }
     if (take("[")) {
@@ -232,7 +233,7 @@ function isAssignment(text) {
 }
 
 function normalizeCode(text) {
-  return text.replace(/　/gu, "  ").normalize("NFKC").replace(/[−–]/gu, "-");
+  return text.replace(/　/gu, "  ").normalize("NFKC").replace(/[−–]/gu, "-").replace(/×/gu, "*");
 }
 
 const QUOTES = { '"': '"', "'": "'", "“": '"', "”": '"', "＂": '"', "＇": "'" };
@@ -381,6 +382,53 @@ export function parseProgram(source) {
   }
 
   return parseBlock(0, 0);
+}
+
+// ブロックの入力欄1つ分の式を、コードの行と同じ表記ゆれ処理をしてから読む。
+export function parseExpressionText(source) {
+  const { code, comment } = splitLine(source);
+  if (comment !== null) throw new ProgramError("式に使えない記号「#」があります。", 1);
+  return parseExpression(code, 1);
+}
+
+const PREFIX_LEVEL = { "-": 6, not: 3 };
+
+function quoteString(value) {
+  return '"' + value.replace(/[\\"]/gu, "\\$&").replace(/\n/gu, "\\n").replace(/\r/gu, "\\r").replace(/\t/gu, "\\t") + '"';
+}
+
+// 式の木をコードに戻す。優先順位に必要な括弧と、元のコードに書かれていた括弧を付ける。
+// raw はブロックで入力途中の文字列で、そのまま出す。
+export function expressionToSource(node) {
+  function format(node, minimum = 0, leftOf = 0) {
+    if (node.type === "raw") return node.text;
+    let text;
+    let level = 9;
+    if (node.type === "literal") text = typeof node.value === "string" ? quoteString(node.value) : String(node.value);
+    else if (node.type === "variable") text = node.name;
+    else if (node.type === "array") text = "[" + node.values.map((value) => format(value)).join(", ") + "]";
+    else if (node.type === "call") text = node.name === "入力" && !node.args.length ? "【外部からの入力】" : node.name + "(" + node.args.map((arg) => format(arg)).join(", ") + ")";
+    else if (node.type === "index") {
+      const indexes = [];
+      let target = node;
+      while (target.type === "index" && (target === node || !target.paren)) {
+        indexes.unshift(format(target.index));
+        target = target.target;
+      }
+      text = format(target, 9) + "[" + indexes.join(", ") + "]";
+    } else if (node.type === "unary") {
+      level = PREFIX_LEVEL[node.op];
+      text = (node.op === "-" ? "-" : "not ") + format(node.value, level);
+    } else {
+      level = PRECEDENCE[node.op];
+      const right = node.op === "**";
+      text = format(node.left, right ? level + 1 : level, level) + " " + node.op + " " + format(node.right, right ? level : level + 1);
+    }
+    // 前置の - や not は右へ広く掛かるので、左側の項に置くときは括弧で閉じる。
+    const wrap = node.paren || level < minimum || (node.type === "unary" && leftOf >= level);
+    return wrap ? "(" + text + ")" : text;
+  }
+  return format(node);
 }
 
 function indent(level) { return "  ".repeat(level); }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseProgram, programToSource, runProgram } from "../runtime.js";
+import { expressionToSource, parseExpressionText, parseProgram, programToSource, runProgram } from "../runtime.js";
 import { lessons } from "../lessons.js";
 
 function run(source, options = {}) {
@@ -154,4 +154,37 @@ test("配列のすべての値を同じ値にする", () => {
   assert.equal(run(source), "[0, 0, 0]\n[[1, 1], [1, 1]]\n");
   assert.equal(roundTrip(source), source);
   assert.match(errorOf("xのすべての値を0にする").message, /配列/u);
+});
+
+// 式の木から行やline情報を除き、意味だけを比べる。
+function shape(node) {
+  return JSON.parse(JSON.stringify(node, (key, value) => (key === "line" || key === "paren" ? undefined : value)));
+}
+
+function expressionsOf(nodes, list = []) {
+  for (const node of nodes) {
+    list.push(node.expression, node.condition, node.start, node.end, node.step, node.target?.indexText, ...(node.argsText ?? []));
+    for (const child of [node.then, node.otherwise, node.body]) if (child) expressionsOf(child, list);
+  }
+  return list.filter((text) => typeof text === "string");
+}
+
+test("式をブロックからコードに戻しても意味が変わらない", () => {
+  const sources = [officialSample, ...lessons.map((lesson) => lesson.code)].flatMap((source) => expressionsOf(parseProgram(source)));
+  sources.push("(not b) == c", "not b == c", "(-a) ** 2", "-a ** 2", "a - (b - c)", "(a - b) - c", "(a ** b) ** c", "a ** b ** c", "-a + b",
+    "a * -b", "a + (not b)", "(a < b) == c", "a / b ÷ c % d", String.raw`"引用\"符\\と\n改行"`, "A[i, j]", "A[i][j + 1]", "(A[0])[1]", "【外部からの入力】",
+    "最大値(a + 1, 要素数(B))", "[[1, 2], [3, -4]]", "true and not false or x != 3", "((i + r - 2) % n) + 1");
+  for (const source of sources) {
+    const tree = parseExpressionText(source);
+    const text = expressionToSource(tree);
+    assert.deepEqual(shape(parseExpressionText(text)), shape(tree), source + " → " + text);
+  }
+  assert.equal(expressionToSource(parseExpressionText("((i + r - 2) % n) + 1")), "((i + r - 2) % n) + 1");
+  assert.equal(expressionToSource({ type: "binary", op: "*", left: parseExpressionText("a + b"), right: parseExpressionText("c") }), "(a + b) * c");
+  assert.equal(expressionToSource({ type: "binary", op: "==", left: { type: "unary", op: "not", value: parseExpressionText("b") }, right: parseExpressionText("c") }), "(not b) == c");
+});
+
+test("ブロックの入力欄は全角や×も読む", () => {
+  assert.equal(expressionToSource(parseExpressionText("ｘ＋１×２")), "x + 1 * 2");
+  assert.throws(() => parseExpressionText("x # メモ"), /#/u);
 });
