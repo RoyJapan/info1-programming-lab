@@ -68,19 +68,25 @@ test("公式サンプル: コード→ブロック→コードで同じ結果に
   assert.equal(roundTrip(source), source);
 });
 
-test("配列の要素の番号は0から", () => {
+test("既定の配列添字は0始まり", () => {
   assert.equal(run("Data = [3, 1, 4]\ngoukei = 0\ni を 0 から 要素数(Data) - 1 まで 1 ずつ増やしながら繰り返す:\n  goukei = goukei + Data[i]\n表示する(goukei)"), "8\n");
+});
+
+test("教材は問題文で指定された配列添字を使う", () => {
+  assert.equal(lessons.find((lesson) => lesson.id === "past-r7-task-assignment").arrayBase, 1);
+  assert.equal(lessons.find((lesson) => lesson.id === "past-r8-wait-time").arrayBase, 1);
+  assert.equal(lessons.find((lesson) => lesson.id === "forecast-2027-count-days").arrayBase ?? 0, 0);
 });
 
 test("教材はすべて期待出力どおりで、往復してもコードが変わらない", () => {
   for (const lesson of lessons) {
-    assert.equal(run(lesson.code, { inputValues: lesson.input }).trimEnd(), lesson.expected, lesson.id);
+    assert.equal(run(lesson.code, { arrayBase: lesson.arrayBase ?? 0, inputValues: lesson.input }).trimEnd(), lesson.expected, lesson.id);
     assert.equal(roundTrip(lesson.code), lesson.code, lesson.id);
   }
 });
 
-test("番号が範囲外なら0からの範囲を示す", () => {
-  assert.match(errorOf("A = [3, 8]\n表示する(A[2])").message, /0～1/u);
+test("1始まりは配列の設定で選べる", () => {
+  assert.equal(run("A = [3, 8]\n表示する(A[1], A[2])", { arrayBase: 1 }), "38\n");
 });
 
 test("コメント: 行全体、行末、文字列の中の#", () => {
@@ -137,9 +143,9 @@ test("“”で囲んだ文字列も読み、半角の\"の中の“”はその
 
 test("二次元配列: 読み出し、書き込み、要素数", () => {
   const source = "Data = [[1, 2, 3], [4, 5, 6]]\nData[1, 2] = 9\n表示する(Data[0, 1], Data[1, 2], 要素数(Data), 要素数(Data[0]))";
-  assert.equal(run(source), "2923\n");
+  assert.equal(run(source, { arrayBase: 0 }), "2923\n");
   assert.equal(roundTrip(source), source);
-  assert.match(errorOf("D = [[1], [2]]\n表示する(D[0, 1])").message, /範囲外/u);
+  assert.match(errorOf("D = [[1], [2]]\n表示する(D[0, 1])", { arrayBase: 0 }).message, /範囲外/u);
   assert.match(errorOf("D = [[[1]]]").message, /二次元/u);
 });
 

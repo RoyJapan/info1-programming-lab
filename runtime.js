@@ -498,7 +498,7 @@ function snapshotState(environment) {
   return Object.fromEntries([...environment.entries()].map(([key, value]) => [key, copyValue(value)]));
 }
 
-export function runProgram(source, { inputValues = [] } = {}) {
+export function runProgram(source, { arrayBase = 0, inputValues = [] } = {}) {
   const program = parseProgram(source);
   const environment = new Map();
   const inputs = [...inputValues];
@@ -524,9 +524,10 @@ export function runProgram(source, { inputValues = [] } = {}) {
   function elementIndex(array, value, line) {
     if (!Array.isArray(array)) throw new ProgramError("配列の要素を指定してください。", line);
     const index = numberValue(value, line);
-    if (!Number.isInteger(index)) throw new ProgramError("配列の要素の番号には整数を使ってください。", line);
-    if (index < 0 || index >= array.length) throw new ProgramError(`配列の範囲外です（要素の番号は0～${array.length - 1}）。`, line);
-    return index;
+    if (!Number.isInteger(index)) throw new ProgramError("配列の添字には整数を使ってください。", line);
+    const internal = index - arrayBase;
+    if (internal < 0 || internal >= array.length) throw new ProgramError(`配列の範囲外です（${arrayBase}始まり、${arrayBase}～${arrayBase + array.length - 1}）。`, line);
+    return internal;
   }
 
   function evaluate(node) {

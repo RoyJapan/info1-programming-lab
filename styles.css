@@ -105,6 +105,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .editor-heading .muted { margin-left: 8px; font-size: .86rem; }
 .editor-options { display: flex; align-items: center; gap: 6px; }
 .setting-label { color: var(--muted); font-size: .82rem; }
+/* 添字の説明。マウスは重ねるだけ、タッチはタップで開閉する */
+.info-tip { position: relative; display: inline-flex; }
+.info-button { width: 32px; height: 44px; margin: 0 -6px; padding: 0; border: 0; background: none; cursor: help; }
+.info-button::before { content: "i"; display: inline-grid; place-items: center; width: 17px; height: 17px; border: 1.5px solid #b8afb2; border-radius: 50%; color: #a39a9d; font: italic 700 11px/1 Georgia, serif; }
+.info-button:hover::before, .info-tip.open .info-button::before { border-color: var(--muted); color: var(--muted); }
+.info-bubble { display: none; position: absolute; z-index: 15; top: calc(100% + 2px); left: -12px; width: min(320px, calc(100vw - 40px)); padding: 11px 13px; border: 1px solid var(--line); border-radius: 9px; background: white; box-shadow: 0 8px 22px #351c2526; color: var(--ink); font-size: .84rem; font-weight: 400; line-height: 1.65; text-align: left; white-space: normal; }
+.info-tip.open .info-bubble { display: block; }
+@media (hover: hover) { .info-tip:hover .info-bubble { display: block; } }
 .editor-options select { min-height: 44px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; background: white; }
 .mode-button { min-height: 44px; padding: 5px 10px; border-color: var(--line); }
 .mode-button.active { color: var(--wine); background: var(--wine-soft); border-color: #dabac2; font-weight: 700; }
@@ -131,6 +139,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .palette-block:hover { background: var(--wine-soft); }
 .palette-reporter { border: 1px solid #8cc595; border-radius: 999px; background: #e6f6e8; color: #1f4d27; font-weight: 700; }
 .palette-reporter:hover { background: #d3efd7; }
+.palette-reporter .block-word { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.palette-note { color: #4f6b54; font-size: .74rem; font-weight: 500; }
 .block-stage { flex: 1; min-height: 300px; max-height: 72dvh; overflow: auto; padding: 0 12px 12px; }
 .block-ghost { position: fixed; z-index: 30; margin: 0; opacity: .88; pointer-events: none; box-shadow: 0 10px 24px #351c2540; }
 .block-dragging { opacity: .35; pointer-events: none; }
@@ -160,6 +170,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .rb .rb { background: #d1eed6; }
 .rb .rb .rb { background: #e6f6e8; }
 .rb > .block-word { color: #1f4d27; font-weight: 800; }
+.rb-op { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 1.08rem; cursor: help; }
 .rb-leaf { border-color: #b8d9bd; }
 .rb-remove { display: none; min-width: 36px; min-height: 36px; align-items: center; justify-content: center; border: 1px solid #8cc595; border-radius: 50%; background: white; color: var(--red); cursor: pointer; }
 .rb.active > .rb-remove { display: inline-flex; }
@@ -275,6 +286,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .panel-heading { padding-inline: 9px; }
   .editor-options { flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
   .setting-label { display: none; }
+  .info-bubble { position: fixed; top: auto; left: 16px; right: 16px; width: auto; margin-top: 46px; }
   .editor-options select { min-height: 44px; }
   .mode-button { min-height: 44px; padding-inline: 8px; }
   .line-numbers { width: 44px; padding-inline: 5px; }

@@ -50,24 +50,22 @@ const previousDefaultCode = [
   "表示する(\"合計：\", 合計)",
 ].join("\n");
 
-const ONE_BASED_NOTICE = "1から数える設定で保存されたプログラムです。要素の番号は0から数えるので、番号を直すか教材を読み込み直してください。";
-
 function readSavedState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const saved = JSON.parse(raw);
     if (!saved || typeof saved !== "object" || typeof saved.code !== "string" || saved.code.length > runtimeLimits.sourceLength) return null;
-    const migrateStarter = saved.title === "配列の合計を求める" && saved.code === previousDefaultCode;
+    const migrateStarter = saved.title === "配列の合計を求める" && saved.code === previousDefaultCode && saved.arrayBase === 1;
     return {
       code: migrateStarter ? defaultCode : saved.code,
       title: typeof saved.title === "string" ? saved.title.slice(0, 80) : "新しいプログラム",
       inputValues: typeof saved.inputValues === "string" ? saved.inputValues.slice(0, 20_000) : "",
       prediction: typeof saved.prediction === "string" ? saved.prediction.slice(0, 20_000) : "",
       skipPrediction: saved.skipPrediction === true,
+      arrayBase: migrateStarter ? 0 : saved.arrayBase === 1 ? 1 : 0,
       records: Array.isArray(saved.records) ? saved.records.slice(0, 10) : [],
       lessonId: lessons.some((lesson) => lesson.id === saved.lessonId) ? saved.lessonId : null,
-      oneBased: saved.arrayBase === 1 && !migrateStarter,
     };
   } catch {
     return null;
@@ -82,6 +80,7 @@ function currentState() {
     inputValues: $("input-values").value,
     prediction: $("prediction").value,
     skipPrediction: $("skip-prediction").checked,
+    arrayBase: Number($("array-base").value) === 0 ? 0 : 1,
     records: state.records.slice(0, 10),
     lessonId: state.currentLessonId,
   };
@@ -189,6 +188,7 @@ function replaceDocument(data, action) {
   $("input-values").value = data.inputValues || "";
   $("prediction").value = data.prediction || "";
   $("skip-prediction").checked = data.skipPrediction === true;
+  $("array-base").value = String(data.arrayBase === 1 ? 1 : 0);
   setCode(data.code || "", { history: false, save: false });
   resetHistory();
   if (!saveState(false)) showToast("この端末への保存に失敗しました。ページを閉じる前に書き出してください。");
@@ -469,27 +469,26 @@ const STATEMENT_ITEMS = [
   { type: "while", kind: "while", text: "○ の間繰り返す" },
   { type: "comment", kind: "comment", text: "# メモ" },
 ];
-// 演算子の読み方。四則演算は + − × ÷ の記号、それ以外は日本語で表す。
-// コードの / は「÷」、共通テストの ÷（商の整数部分）は「を○で割った商」と読み、記号の÷とは区別する。
+// 演算子は情報Ⅰ（共通テスト）の表記のまま表示し、意味と例を説明として添える。
 const OPERATORS = [
-  { op: "+", words: ["＋"], short: "たす", group: "calc" },
-  { op: "-", words: ["−"], short: "ひく", group: "calc" },
-  { op: "*", words: ["×"], short: "かける", group: "calc" },
-  { op: "/", words: ["÷"], short: "わる", group: "calc" },
-  { op: "÷", words: ["を", "で割った商"], short: "商", group: "calc" },
-  { op: "%", words: ["を", "で割った余り"], short: "余り", group: "calc" },
-  { op: "**", words: ["の", "乗"], short: "乗", group: "calc" },
-  { op: "==", words: ["と", "が等しい"], short: "等しい", group: "logic" },
-  { op: "!=", words: ["と", "が等しくない"], short: "等しくない", group: "logic" },
-  { op: "<", words: ["が", "より小さい"], short: "より小さい", group: "logic" },
-  { op: "<=", words: ["が", "以下"], short: "以下", group: "logic" },
-  { op: ">", words: ["が", "より大きい"], short: "より大きい", group: "logic" },
-  { op: ">=", words: ["が", "以上"], short: "以上", group: "logic" },
-  { op: "and", words: ["かつ"], short: "かつ", group: "logic" },
-  { op: "or", words: ["または"], short: "または", group: "logic" },
-  { op: "not", words: ["ではない"], short: "ではない", group: "logic" },
+  { op: "+", short: "たし算", help: "たし算。3 + 2 → 5", group: "calc" },
+  { op: "-", short: "ひき算", help: "ひき算。3 - 2 → 1", group: "calc" },
+  { op: "*", short: "かけ算（×）", help: "かけ算。算数の × です。3 * 2 → 6", group: "calc" },
+  { op: "/", short: "わり算（÷）", help: "わり算。算数の ÷ です。7 / 2 → 3.5", group: "calc" },
+  { op: "÷", short: "商（整数）", help: "わり算の商の整数部分。7 ÷ 2 → 3（算数の ÷ とは違い、小数にならない）", group: "calc" },
+  { op: "%", short: "余り", help: "わり算の余り。7 % 2 → 1", group: "calc" },
+  { op: "**", short: "べき乗", help: "べき乗。2 ** 3 → 8（2の3乗）", group: "calc" },
+  { op: "==", short: "等しい", help: "左右が等しいとき真（算数の ＝）。3 == 3 → true", group: "logic" },
+  { op: "!=", short: "等しくない", help: "左右が等しくないとき真（≠）。3 != 2 → true", group: "logic" },
+  { op: "<", short: "より小さい", help: "左が右より小さいとき真。2 < 3 → true", group: "logic" },
+  { op: "<=", short: "以下", help: "左が右以下のとき真（≦）。3 <= 3 → true", group: "logic" },
+  { op: ">", short: "より大きい", help: "左が右より大きいとき真。3 > 2 → true", group: "logic" },
+  { op: ">=", short: "以上", help: "左が右以上のとき真（≧）。3 >= 3 → true", group: "logic" },
+  { op: "and", short: "かつ", help: "両方とも真のとき真。x > 0 and x < 10", group: "logic" },
+  { op: "or", short: "または", help: "どちらかが真のとき真。x < 0 or x > 10", group: "logic" },
+  { op: "not", short: "ではない", help: "真と偽を反対にする。not x == 0 は「x が 0 ではない」", group: "logic" },
 ];
-const OPERATOR_WORDS = Object.fromEntries(OPERATORS.map((item) => [item.op, item.words]));
+const OPERATOR_INFO = Object.fromEntries(OPERATORS.map((item) => [item.op, item]));
 const FUNCTION_ITEMS = [
   { name: "要素数", arity: 1 }, { name: "最大値", arity: 2 }, { name: "最小値", arity: 2 }, { name: "整数", arity: 1 },
   { name: "乱数", arity: 0 }, { name: "入力", arity: 0, text: "【外部からの入力】" },
@@ -506,8 +505,12 @@ const exprSlots = new WeakMap(); // 式の入力欄・演算ブロック → { g
 let blockDrag = null;
 
 function operatorLabel(item) {
-  if (item.op === "not") return "○ ではない";
-  return "○ " + item.words[0] + " ○" + (item.words[1] ? " " + item.words[1] : "");
+  return item.op === "not" ? "not ○" : "○ " + item.op + " ○";
+}
+
+// 演算子の記号。マウスを重ねると説明が出る（タップ時は下の案内欄に出す）。
+function operatorWord(op) {
+  return el("span", { className: "block-word rb-op", attrs: { title: op + " … " + OPERATOR_INFO[op].help } }, op);
 }
 
 function makeBlock(type) {
@@ -592,12 +595,11 @@ function renderExpression(node, set, ctx) {
   const pill = el("span", { className: "rb" });
   const part = (child, assign) => renderExpression(child, assign, ctx);
   if (node.type === "binary") {
-    const [first, last] = OPERATOR_WORDS[node.op];
-    pill.append(part(node.left, (value) => { node.left = value; }), blockWord(first), part(node.right, (value) => { node.right = value; }));
-    if (last) pill.append(blockWord(last));
+    pill.dataset.op = node.op;
+    pill.append(part(node.left, (value) => { node.left = value; }), operatorWord(node.op), part(node.right, (value) => { node.right = value; }));
   } else if (node.type === "unary") {
-    if (node.op === "-") pill.append(blockWord("−"), part(node.value, (value) => { node.value = value; }));
-    else pill.append(part(node.value, (value) => { node.value = value; }), blockWord("ではない"));
+    if (node.op === "not") pill.dataset.op = "not";
+    pill.append(node.op === "not" ? operatorWord("not") : blockWord("-"), part(node.value, (value) => { node.value = value; }));
   } else if (node.type === "call") {
     pill.append(blockWord(node.name + "("));
     node.args.forEach((arg, index) => {
@@ -792,11 +794,13 @@ function renderBlockPalette(tab = "statements") {
   let items;
   if (tab === "statements") items = STATEMENT_ITEMS.map((item) => ({ spec: { type: item.type }, kind: item.kind, label: BLOCK_LABELS[item.kind], text: item.text }));
   else if (tab === "functions") items = FUNCTION_ITEMS.map((item) => ({ spec: item, text: item.text ?? item.name + "(" + (item.arity === 2 ? "○, ○" : item.arity ? "○" : "") + ")" }));
-  else items = OPERATORS.filter((item) => item.group === tab).map((item) => ({ spec: item, text: operatorLabel(item) }));
-  $("block-palette-items").replaceChildren(...items.map(({ spec, kind, label, text }) => {
+  else items = OPERATORS.filter((item) => item.group === tab).map((item) => ({ spec: item, text: operatorLabel(item), note: item.short, help: item.op + " … " + item.help }));
+  $("block-palette-items").replaceChildren(...items.map(({ spec, kind, label, text, note, help }) => {
     const button = el("button", { type: "button", className: kind ? "palette-block" : "palette-block palette-reporter", dataset: kind ? { kind } : {} });
+    if (help) button.title = help;
     if (label) button.append(el("b", {}, label));
     button.append(blockWord(text));
+    if (note) button.append(el("small", { className: "palette-note" }, note));
     button.addEventListener("pointerdown", (event) => beginBlockDrag(event, { spec, element: button }));
     button.addEventListener("click", () => {
       if (performance.now() - state.blockDragEnd < 400) return;
@@ -838,7 +842,14 @@ function selectBlockTarget(target) {
 function setExpressionTarget(slot) {
   $("block-stage").querySelectorAll(".rb.active").forEach((item) => item.classList.remove("active"));
   state.exprTarget = slot;
-  (slot?.classList.contains("rb") ? slot : slot?.parentElement.closest(".rb"))?.classList.add("active");
+  const pill = slot?.classList.contains("rb") ? slot : slot?.parentElement.closest(".rb");
+  pill?.classList.add("active");
+  // タッチでは title が見えないので、選んだ演算の説明を案内欄に出す。
+  const info = OPERATOR_INFO[pill?.dataset.op];
+  if (info && state.blocksValid) {
+    $("blocks-message").textContent = info.op + " … " + info.help;
+    $("blocks-message").className = "muted blocks-message";
+  }
 }
 
 function beginBlockDrag(event, source) {
@@ -995,6 +1006,7 @@ function renderLessonList(filter = "all") {
     card.append(el("h3", {}, lesson.title));
     const meta = el("div", { className: "lesson-meta" });
     meta.append(el("span", { className: "lesson-chip" }, lesson.year), el("span", { className: "lesson-chip" }, lesson.level));
+    if (lesson.arrayBase === 1) meta.append(el("span", { className: "lesson-chip" }, "添字は1から（問題文指定）"));
     lesson.tags.forEach((tag) => meta.append(el("span", { className: "lesson-chip" }, tag)));
     card.append(meta, el("p", {}, lesson.prompt), el("p", {}, lesson.explanation), el("p", {}, lesson.rationale));
     const source = el("p", { className: "lesson-source" });
@@ -1019,6 +1031,7 @@ function renderLessonList(filter = "all") {
         inputValues: lesson.input.join("\n"),
         prediction: "",
         skipPrediction: false,
+        arrayBase: lesson.arrayBase ?? 0,
       }, lesson.title)) return;
       $("lesson-dialog").close();
       showToast("「" + lesson.title + "」を追加しました。");
@@ -1035,6 +1048,7 @@ function validateImport(value) {
   if (typeof value.title !== "string" || value.title.length > 80) return null;
   if (typeof value.inputValues !== "string" || value.inputValues.length > 20_000) return null;
   if (typeof value.prediction !== "string" || value.prediction.length > 20_000) return null;
+  if (value.arrayBase !== 0 && value.arrayBase !== 1) return null;
   if (typeof value.skipPrediction !== "boolean") return null;
   return value;
 }
@@ -1062,7 +1076,7 @@ async function openProgramFile(file) {
     const parsed = JSON.parse(await file.text());
     const data = validateImport(parsed);
     if (!data) { showToast("このファイル形式には対応していません。現在の内容は変更していません。"); return; }
-    if (replaceDocument(data, "ファイルを開く")) showToast(data.arrayBase === 1 ? ONE_BASED_NOTICE : "ファイルを開きました。");
+    if (replaceDocument(data, "ファイルを開く")) showToast("ファイルを開きました。");
   } catch {
     showToast("JSONを読み取れません。現在の内容は変更していません。");
   } finally {
@@ -1131,6 +1145,7 @@ function executeProgram() {
   state.playTimer = null;
   try {
     const result = runProgram(code.value, {
+      arrayBase: Number($("array-base").value),
       inputValues: parseInputValues(),
     });
     state.trace = result.trace;
@@ -1190,12 +1205,14 @@ function renderInitialState() {
     inputValues: "",
     prediction: "",
     skipPrediction: false,
+    arrayBase: 0,
     records: [],
   };
   $("program-title").value = initial.title;
   $("input-values").value = initial.inputValues;
   $("prediction").value = initial.prediction;
   $("skip-prediction").checked = initial.skipPrediction;
+  $("array-base").value = String(initial.arrayBase);
   code.value = initial.code;
   state.records = initial.records;
   state.currentLessonId = initial.lessonId || null;
@@ -1208,7 +1225,6 @@ function renderInitialState() {
   renderBlockPalette();
   updateRunButtonState();
   switchToBlocks();
-  if (initial.oneBased) showToast(ONE_BASED_NOTICE);
 }
 
 code.addEventListener("input", () => {
@@ -1238,6 +1254,15 @@ $("program-title").addEventListener("input", scheduleSave);
 $("input-values").addEventListener("input", scheduleSave);
 $("prediction").addEventListener("input", scheduleSave);
 $("skip-prediction").addEventListener("change", scheduleSave);
+$("array-base").addEventListener("change", () => { clearTrace(); scheduleSave(); });
+// 添字の説明: タップで開閉し、外側のタップやEscで閉じる
+function setIndexInfo(open) {
+  $("index-info").closest(".info-tip").classList.toggle("open", open);
+  $("index-info").setAttribute("aria-expanded", String(open));
+}
+$("index-info").addEventListener("click", () => setIndexInfo($("index-info").getAttribute("aria-expanded") !== "true"));
+document.addEventListener("click", (event) => { if (!event.target.closest(".info-tip")) setIndexInfo(false); });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") setIndexInfo(false); });
 $("run-button").addEventListener("click", executeProgram);
 $("code-mode").addEventListener("click", switchToCode);
 $("blocks-mode").addEventListener("click", switchToBlocks);
@@ -1264,7 +1289,7 @@ document.querySelectorAll("[data-action]").forEach((button) => button.addEventLi
   button.closest("details")?.removeAttribute("open");
   const action = button.dataset.action;
   if (action === "new") {
-    replaceDocument({ code: "", title: "新しいプログラム", inputValues: "", prediction: "", skipPrediction: false }, "新規作成");
+    replaceDocument({ code: "", title: "新しいプログラム", inputValues: "", prediction: "", skipPrediction: false, arrayBase: 0 }, "新規作成");
   } else if (action === "lessons") openDialog("lesson-dialog");
   else if (action === "open") $("open-file").click();
   else if (action === "paste") {
